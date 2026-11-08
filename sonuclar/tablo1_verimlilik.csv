@@ -1,0 +1,9 @@
+model,variant,footprint_gb,peak_gpu_gb,tok_per_s,perplexity,load_s,footprint_gb_degisim_%,tok_per_s_degisim_%,perplexity_degisim_%
+cosmos,fp16,14.96,15.11,14.53,6.755,110.7,0.0,0.0,0.0
+cosmos,int8,8.46,8.82,6.03,6.825,28.4,-43.4,-58.5,1.0
+cosmos,nf4,5.21,5.9,13.12,7.411,122.5,-65.2,-9.7,9.7
+cosmos,gptq4,5.34,7.46,15.81,7.15,11.0,-64.3,8.8,5.8
+trendyol,fp16,14.96,15.11,14.64,4.075,116.7,0.0,0.0,0.0
+trendyol,int8,8.46,8.64,6.28,4.146,81.5,-43.4,-57.1,1.7
+trendyol,nf4,5.21,5.78,14.38,4.305,70.6,-65.2,-1.8,5.6
+trendyol,gptq4,5.34,5.48,15.57,4.241,32.7,-64.3,6.4,4.1

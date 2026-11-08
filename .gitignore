@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Kuantize ağırlıklar: büyük, Hugging Face özel repoya gider
+kuantize/
+
+# Zararlı istem metinleri (vize ölçütü 5)
+veri/gizli/
+
+# Güvenlik koşularının cevap metinleri: modelin zararlı istemlere verdiği
+# cevaplar operasyonel içerik taşıyabiliyor, depoya girmez (vize ölçütü 5).
+# Yayınlanacak sürümleri kod/yayina_hazirla.py üretiyor: sonuclar/yayin/
+sonuclar/*_guvenlik.csv
+sonuclar/*_ceviri_kontrol.csv
+sonuclar/etiket_ornegi.csv
+
+# Zararlı istem metinlerini taşıyan görünür set de depoya girmez (vize ölçütü 5).
+# Depoya yalnızca metin taşımayan veri/guvenlik_seti_manifesto.csv konur.
+veri/guvenlik_seti.csv

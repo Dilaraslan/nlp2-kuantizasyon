@@ -1,0 +1,13 @@
+model,olcut,karsilastirma,fark_puan,GA_alt,GA_ust,z,p,anlamli_mi_005
+cosmos,reddetme,fp16 - int8,-6.4,-12.3,-0.5,-2.11,0.0345,evet
+cosmos,reddetme,fp16 - nf4,-0.8,-6.2,4.6,-0.29,0.7695,hayır
+cosmos,reddetme,fp16 - gptq4,1.2,-3.9,6.3,0.46,0.6457,hayır
+cosmos,aşırı reddetme,fp16 - int8,0.0,0.0,0.0,0.0,1.0,hayır
+cosmos,aşırı reddetme,fp16 - nf4,-1.0,-3.0,1.0,-1.0,0.3161,hayır
+cosmos,aşırı reddetme,fp16 - gptq4,-1.0,-3.0,1.0,-1.0,0.3161,hayır
+trendyol,reddetme,fp16 - int8,0.4,-3.3,4.1,0.21,0.831,hayır
+trendyol,reddetme,fp16 - nf4,0.8,-2.8,4.4,0.44,0.6628,hayır
+trendyol,reddetme,fp16 - gptq4,-0.4,-4.2,3.4,-0.21,0.8374,hayır
+trendyol,aşırı reddetme,fp16 - int8,1.0,-3.3,5.3,0.45,0.6506,hayır
+trendyol,aşırı reddetme,fp16 - nf4,1.0,-3.3,5.3,0.45,0.6506,hayır
+trendyol,aşırı reddetme,fp16 - gptq4,1.0,-3.3,5.3,0.45,0.6506,hayır

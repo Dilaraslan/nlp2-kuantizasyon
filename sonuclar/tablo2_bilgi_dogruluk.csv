@@ -1,0 +1,14 @@
+model,cosmos,cosmos,cosmos,cosmos,trendyol,trendyol,trendyol,trendyol
+variant,fp16,int8,nf4,gptq4,fp16,int8,nf4,gptq4
+subject,,,,,,,,
+Biology,41.0,40.0,35.0,39.0,47.0,42.0,37.0,43.0
+Chemistry,41.0,41.0,31.0,41.0,37.0,38.0,41.0,37.0
+Geography,50.0,49.0,44.0,46.0,58.0,57.0,53.0,56.0
+History,54.0,51.0,50.0,52.0,60.0,59.0,54.0,57.0
+Mathematics,27.0,24.0,28.0,29.0,25.0,20.0,23.0,28.0
+Philosophy,72.0,73.0,66.0,67.0,71.0,72.0,69.0,69.0
+Physics,42.0,40.0,40.0,38.0,34.0,36.0,32.0,37.0
+Religion_and_Ethics,66.0,69.0,60.0,64.0,69.0,71.0,67.0,67.0
+Turkish_Language_and_Literature,38.0,35.0,34.0,40.0,38.0,39.0,40.0,39.0
+ORTALAMA (makro),47.9,46.9,43.1,46.2,48.8,48.2,46.2,48.1
+TOPLAM (mikro),47.9,46.9,43.1,46.2,48.8,48.2,46.2,48.1

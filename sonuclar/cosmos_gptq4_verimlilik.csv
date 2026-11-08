@@ -1,0 +1,2 @@
+model,variant,load_s,footprint_gb,peak_gpu_gb,tok_per_s,perplexity,gpus
+cosmos,gptq4,11.0,5.34,7.46,15.81,7.15,Tesla T4|Tesla T4

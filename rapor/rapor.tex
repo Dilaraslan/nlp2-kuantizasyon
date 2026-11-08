@@ -1,0 +1,1035 @@
+% Kuantizasyonun Türkçe LLM'lerde bilgi, güvenlik ve önyargı üzerindeki etkisi
+% IEEE konferans şablonu. Overleaf'te "IEEE Conference" şablonuyla derlenir.
+%
+% Derleme sırası: pdflatex -> bibtex -> pdflatex -> pdflatex
+%
+% Sonuç bölümündeki sayılar sonuclar/tablo*.csv dosyalarından gelir.
+
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[turkish]{babel}
+\usepackage{url}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Ağırlık Kuantizasyonunun Türkçe Büyük Dil Modellerinde Bilgi,
+Güvenlik ve Toplumsal Önyargı Üzerindeki Etkisi}
+
+\author{\IEEEauthorblockN{Esranur Aslan}
+\IEEEauthorblockA{\textit{Bilgisayar Mühendisliği Anabilim Dalı} \\
+\textit{Kayseri Üniversitesi}\\
+Kayseri, Türkiye \\
+26403024029@kayseri.edu.tr}
+}
+
+\maketitle
+
+\begin{abstract}
+Türkçe için uyarlanmış büyük dil modelleri uygulamada çoğunlukla kuantize
+edilmiş hâlde dağıtılmaktadır; buna karşın yayımlanan değerlendirmeler
+kuantize edilmemiş sürümler üzerinde yapılmaktadır. Bu çalışma, Llama-3
+tabanlı iki Türkçe 8B modelinde (biri talimat ayarlı, biri DPO ile hizalanmış)
+beş kuantizasyon seviyesini (FP16, INT8, NF4, GPTQ-4bit, AWQ-4bit) üç boyutta
+karşılaştırmaktadır: TurkishMMLU ile bilgi doğruluğu, Türkçeye yerelleştirilmiş
+HarmBench ve XSTest ile güvenlik ve aşırı reddetme davranışı, ve bu çalışmada
+oluşturulan TR-BBQ seti ile toplumsal önyargı. Bütün koşullarda aynı istem
+biçimi ve aynı çözümleme ayarları kullanılmıştır. Bulgular, kuantizasyonun
+bedelinin bit genişliğiyle değil yöntemle ölçülmesi gerektiğini
+göstermektedir: aynı bit genişliğindeki ve aynı bellek bütçesindeki NF4 ile
+GPTQ-4bit bilgi doğruluğunda zıt kararlar vermekte ve bu zıtlık iki modelde de
+yeniden üretilmektedir (NF4 için McNemar $p=0{,}029$ ve $p=0{,}0001$,
+GPTQ-4bit için $p=0{,}59$ ve $p=0{,}20$). Sıkıştırmanın en belirgin etkisi
+doğrulukta değil belirsiz bağlamda çekimser kalma oranındadır; ancak bu etki
+modele bağlıdır: talimat ayarlı modelde çekimserlik \%69,3'ten \%45,3'e
+erirken DPO ile hizalanmış modelde dört seviyede \%82,7--87,3 aralığında
+sabit kalmaktadır. Güvenlik boyutunda talimat ayarlı modelde taban etkisi
+gözlenmiş, bunun bir çeviri yapaylığı olmadığı çift dilli bir denetimle
+gösterilmiş ve hizalanmış modelde taban reddetme oranının iki katına
+(\%4,8'den \%10,0'a) çıktığı ölçülmüştür. Bu modelde iki 4-bit seviyesi
+reddetme oranını ölçülebilir biçimde değiştirmemekte, INT8 ise hipotezin
+tersi yönünde değiştirmektedir (\%16,4, $p=0{,}035$). Her iki modelde de bellek ve
+doğruluk eşiklerini birlikte karşılayan tek seviye GPTQ-4bit'tir.
+Çalışmanın yöntemsel bir katkısı da, İngilizce aşırı reddetme setlerinin bir
+bölümünün çeviriyle Türkçeye taşınamadığının gösterilmesi ve yerine Türkçede
+kurulmuş bir kontrol setinin önerilmesidir.
+\end{abstract}
+
+\begin{IEEEkeywords}
+büyük dil modelleri, kuantizasyon, Türkçe doğal dil işleme, model güvenliği,
+toplumsal önyargı, değerlendirme
+\end{IEEEkeywords}
+
+% =====================================================================
+\section{Giriş}
+% =====================================================================
+
+Büyük dil modellerinin bellek ayak izini düşüren ağırlık kuantizasyonu,
+modelleri tek GPU'lu ve yerel donanımda çalıştırılabilir kılan temel tekniktir.
+Türkçe için uyarlanmış 8B sınıfı modeller de pratikte bu yolla
+dağıtılmaktadır. Bu çalışmada ölçülen FP16 ayak izi 14{,}96~GB'dir; yaygın
+olarak erişilebilen 16~GB'lık tek bir T4 hızlandırıcıya, anahtar-değer
+önbelleğiyle birlikte sığmamaktadır. Dolayısıyla \emph{dağıtılan model},
+değerlendirme sonuçlarının raporlandığı model değildir.
+
+Kuantizasyonun dil modelleme kalitesi üzerindeki etkisi iyi çalışılmıştır
+\cite{frantar2023gptq,lin2024awq,li2024evaluating}. Buna karşın kalitenin
+korunduğu durumlarda bile güvenlik davranışının bozulabildiği
+\cite{hong2024decoding}, hatta kuantizasyonun kasıtlı bir saldırı yüzeyine
+dönüştürülebildiği \cite{egashira2024exploiting} gösterilmiştir. Bu bulguların
+tamamı İngilizce üzerinedir. Çok dilli ortamda kuantizasyonun İngilizce
+dışındaki dillere daha çok zarar verdiği bilinmekle birlikte
+\cite{marchisio2024quantization}, bu çalışma kalite boyutuyla sınırlıdır ve
+güvenlik ile önyargıya bakmamaktadır.
+
+\textbf{Araştırma sorusu.} Türkçeye uyarlanmış 8B sınıfı modellerde ağırlık
+kuantizasyonu bilgi doğruluğunu, güvenlik davranışını ve toplumsal önyargıyı
+hangi yönde ve ne büyüklükte değiştirmektedir? Bu üç boyut aynı yönde mi
+bozulmaktadır?
+
+\textbf{Katkılar.} (i) Türkçe için kuantizasyon $\times$ (bilgi, güvenlik,
+önyargı) üçlüsünün birlikte ölçüldüğü ilk değerlendirme; (ii) 25 şablondan
+üretilen, konum ve çerçeve etkileri için dengelenmiş 450 soruluk Türkçe önyargı
+seti (TR-BBQ); (iii) İngilizce aşırı reddetme setlerinin bir bölümünün çeviriyle
+Türkçeye taşınamadığının gösterilmesi ve yerine Türkçede kurulmuş 44 maddelik
+bir kontrol setinin önerilmesi; (iv) zararlı istem metnini herkese açık depoya
+koymadan yeniden üretilebilir bir değerlendirme hattı.
+
+\subsection{Hipotezler}
+
+Çalışmanın hipotezleri ve karar kuralları Tablo~\ref{tab:hipotezler}'de
+verilmiştir. Karar kuralları ölçümden önce sabitlenmiştir.
+
+\begin{table}[t]
+\caption{Hipotezler ve önceden belirlenmiş karar kuralları}
+\label{tab:hipotezler}
+\centering
+\footnotesize
+\begin{tabular}{@{}p{0.5cm}p{3.1cm}p{3.9cm}@{}}
+\toprule
+\textbf{Kod} & \textbf{Hipotez} & \textbf{Karar kuralı} \\
+\midrule
+AS1 & Bilgi kaybı bit sayısıyla monoton azalır &
+TurkishMMLU doğruluğu: FP16 $\geq$ INT8 $\geq$ 4-bit; INT8 farkı $\leq 1$ puan,
+4-bit farkı $\geq 2$ puan \\
+\addlinespace
+AS2 & Güvenlik hizası kuantizasyonla zayıflar &
+HarmBench-TR reddetme oranı 4-bit'te FP16'dan $\geq 5$ puan düşük \\
+\addlinespace
+AS3 & Aşırı reddetme bit sayısından bağımsızdır &
+Güvenli istem reddetme oranında sürümler arası fark $\leq 3$ puan \\
+\addlinespace
+AS4 & Önyargı kuantizasyonla artar &
+TR-BBQ belirsiz bağlam önyargı skoru 4-bit'te FP16'dan $\geq 0{,}05$ yüksek \\
+\addlinespace
+AS5 & Verimlilik kazancı kalite kaybından büyüktür &
+4-bit, FP16 doğruluğunun $\geq \%95$'ini $\leq \%40$ bellekle verir \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+AS3, AS2'nin ayrışma testidir: reddetme oranındaki düşüşün ``model daha az
+aşırı tepki veriyor'' değil ``güvenlik davranışı bozuldu'' biçiminde
+yorumlanabilmesi için güvenli istemlerdeki davranışın sabit kalması gerekir.
+AS1 ile AS2 ve AS4'ün aynı yönde çıkması zorunlu değildir; literatürdeki bulgu
+\cite{hong2024decoding} bu boyutların ayrışabildiğini, perplexity korunurken
+güvenliğin bozulabildiğini göstermektedir. Çalışmanın asıl sorusu bu ayrışmanın
+Türkçede de görülüp görülmediğidir.
+
+% =====================================================================
+\section{İlgili Çalışmalar}
+% =====================================================================
+
+\subsection{Kuantizasyon yöntemleri}
+
+GPTQ \cite{frantar2023gptq}, katman katman ikinci derece (Hessian) bilgisi
+kullanarak yeniden yapılandırma hatasını en küçükler ve kalibrasyon verisi
+gerektirir. AWQ \cite{lin2024awq}, aktivasyon büyüklüğüne bakarak ağırlıkların
+küçük bir bölümünü koruyan, yine kalibrasyona dayalı bir yöntemdir. NF4
+\cite{dettmers2023qlora}, normal dağılıma göre bilgi kuramsal olarak optimal
+nicemleme seviyeleri kullanır ve kalibrasyon gerektirmez. LLM.int8()
+\cite{dettmers2022llmint8}, aykırı değer taşıyan sütunları FP16'da ayrı
+hesaplayarak 8-bit çarpımı mümkün kılar. Kalibrasyon ihtiyacındaki bu fark,
+çok dilli modellerde yöntemlerin farklı davranmasını beklemek için gerekçedir;
+bu çalışma kalibrasyon verisi olarak İngilizce yerine Türkçe metin kullanarak
+bu noktayı doğrudan sınamaktadır.
+
+\subsection{Kuantizasyon, kalite ve çok dillilik}
+
+Kuantizasyon stratejilerinin kapsamlı karşılaştırmaları
+\cite{jin2024comprehensive,li2024evaluating} bit sayısı ile kalite arasındaki
+ödünleşimi ayrıntılandırmaktadır. Marchisio ve arkadaşları
+\cite{marchisio2024quantization} kuantizasyonun İngilizce dışındaki dillerde
+daha büyük kayıplara yol açtığını, otomatik ölçütlerin bu kaybı insan
+değerlendirmesine göre olduğundan küçük gösterdiğini bulmuştur. Bu çalışma
+güvenlik ve önyargı boyutlarını kapsamamaktadır.
+
+\subsection{Kuantizasyon ve güvenilirlik}
+
+Bu çalışmanın en yakın öncülü Hong ve arkadaşlarının
+\cite{hong2024decoding} incelemesidir: sıkıştırılmış modellerde güvenilirlik
+boyutlarının kalite ölçütlerinden bağımsız biçimde bozulabildiğini
+göstermektedir. Egashira ve arkadaşları \cite{egashira2024exploiting}
+kuantizasyonun hedeflenmiş bir saldırı yüzeyine dönüştürülebileceğini ortaya
+koymuştur. Kumar ve arkadaşları \cite{kumar2024finetuning} ise ince ayar ve
+kuantizasyonun istenmeyen sonuçlarını incelemekte, çok düşük bit sayılarında
+jailbreak başarısının arttığını bildirmektedir. Üç çalışma da yalnızca
+İngilizce üzerinedir.
+
+\subsection{Değerlendirme setleri}
+
+Güvenlik tarafında HarmBench \cite{mazeika2024harmbench} standartlaştırılmış
+zararlı davranış kümesi sunar; XSTest \cite{rottger2024xstest} ise abartılı
+güvenlik davranışını, yani güvenli istemlerin gereksiz yere reddedilmesini
+ölçer. Önyargı tarafında BBQ \cite{parrish2022bbq} belirsiz ve netleştirilmiş
+bağlamları karşılaştıran soru-cevap tasarımını getirmiş, KoBBQ
+\cite{jin2024kobbq} bu tasarımın başka bir dile ve kültüre taşınması için
+izlenecek yöntemi göstermiştir; bu çalışmadaki TR-BBQ seti o yöntemi
+izlemektedir. Şablona dayalı önyargı ölçümü geleneğinin kaynağı WinoBias
+\cite{zhao2018gender} çalışmasıdır. Türkçe değerlendirme tarafında TurkishMMLU
+\cite{yuksel2024turkishmmlu} gerçek sınav sorularından oluşan çok görevli bir
+bilgi ölçütü sunmakta, Caglidil ve arkadaşları \cite{caglidil2024gender} ise
+Türkçe dil modellerinde cinsiyet önyargısını incelemektedir.
+
+\subsection{Boşluk}
+
+Kuantizasyon ile güvenlik ve önyargı arasındaki ilişkiyi kuran çalışmalar
+\cite{hong2024decoding,egashira2024exploiting,kumar2024finetuning} yalnızca
+İngilizcededir. Çok dilli kalite kaybını gösteren çalışma
+\cite{marchisio2024quantization} güvenlik ve önyargıya bakmamaktadır. BBQ'yu
+başka bir dile taşıyan çalışma \cite{jin2024kobbq} kuantizasyonu
+içermemektedir. \textbf{Türkçede kuantizasyon ile bilgi, güvenlik ve önyargı
+üçlüsünü birlikte ölçen bir çalışma bulunmamaktadır.} Bu çalışma tam bu
+kesişimde konumlanmaktadır.
+
+% =====================================================================
+\section{Yöntem}
+% =====================================================================
+
+\subsection{Modeller ve kuantizasyon seviyeleri}
+
+İki model karşılaştırılmaktadır: \texttt{Trendyol/Llama-3-Trendyol-LLM-8b-chat-v2.0}
+(talimat ayarlı) ve \texttt{ytu-ce-cosmos/Turkish-Llama-8b-DPO-v0.1} (aynı
+Llama-3 tabanı üzerinde DPO ile hizalanmış). İkinci modelin seçimi tasarım
+gereğidir: aynı taban üzerinde farklı hizalama yöntemi, kuantizasyonun hizalama
+ile etkileşimini ayrıştırmayı mümkün kılar.
+
+Beş seviye ölçülmektedir: FP16 (referans), INT8 (LLM.int8()), NF4, GPTQ-4bit ve
+AWQ-4bit. İlk üçü model yüklenirken uygulanır; son ikisi kalibrasyon gerektirir
+ve önceden üretilip kaydedilir. GPTQ ve AWQ için ortak ayarlar kullanılmıştır
+(4~bit, grup boyutu 128), böylece yöntemler arasındaki fark ayardan değil
+yöntemden gelir.
+
+\textbf{Kalibrasyon dili.} GPTQ ve AWQ üretiminde kalibrasyon verisi olarak
+İngilizce C4 yerine Türkçe Vikipedi metinleri (512 örnek) kullanılmıştır.
+Değerlendirme dili Türkçe olduğundan ve kalibrasyon dilinin çok dilli
+modellerde sonucu etkilediği bilindiğinden \cite{marchisio2024quantization},
+bu bilinçli bir yöntem kararıdır.
+
+\subsection{Koşul denkliği}
+
+Bütün koşullarda aynı istem biçimi ve aynı çözümleme ayarları kullanılmıştır.
+Üretim greedy'dir (\texttt{do\_sample=False}), rastgelelik tohumu sabittir
+(42) ve sohbet şablonu her koşulda uygulanmaktadır. Bütün ayarlar tek bir
+yapılandırma modülünde toplanmış, değerlendirme defterleri bu modülden
+okumaktadır; hiçbir defter kendi içinde üretim ayarı, istem şablonu veya
+puanlama yöntemi tanımlamamaktadır. Böylece seviyeler arasındaki farkın
+ayar farkından gelmediği yapısal olarak güvence altına alınmıştır.
+
+\textbf{Sistem istemi.} Değerlendirmelerde sistem istemi bilinçli olarak boş
+bırakılmıştır; amaç modelin varsayılan davranışını ölçmektir. Bu seçimin
+güvenlik sonuçları üzerindeki etkisi Bölüm~\ref{sec:sinirliliklar}'da ayrıca
+ele alınmaktadır.
+
+\subsection{Bilgi: TurkishMMLU}
+
+TurkishMMLU \cite{yuksel2024turkishmmlu} dokuz dersten oluşmakta ve beş şıklı
+(A--E) gerçek sınav sorularını içermektedir. Her dersten sabit tohumla 100 soru
+örneklenmiş, her soru için dersin kendi geliştirme bölümünden alınan 5 örnekle
+5-shot istem kurulmuştur. Böylece her model $\times$ seviye koşusu birebir aynı
+900 soruyu görmektedir.
+
+Puanlama, üretilen metni ayrıştırmak yerine \emph{harf olasılığı} üzerinden
+yapılmaktadır: cevap konumunda A--E harflerinin logit değerleri karşılaştırılır
+ve en yüksek olan seçilir. Bu yöntem ayrıştırma hatasını ortadan kaldırır ve
+deterministiktir. Modelin bu biçime uyma isteği, A--E harflerine giden toplam
+olasılık kütlesiyle ayrıca raporlanmaktadır.
+
+\subsection{Güvenlik: HarmBench-TR ve kontrol setleri}
+
+\textbf{Veri hattı.} Zararlı istemler elle yazılmamış, kamuya açık setler
+kaynağından çalışma anında indirilmiştir: HarmBench \cite{mazeika2024harmbench}
+(200 standart davranış, MIT lisansı) ve XSTest \cite{rottger2024xstest}
+(250 güvenli + 200 zararlı istem, CC-BY-4.0). İstemler makine çevirisiyle
+Türkçeye çevrilmiş, ardından kurum ve yer adları için bir yerelleştirme
+tablosuyla uyarlanmıştır. Yerelleştirmede gerçek marka adları hedef olarak
+kullanılmamış, gerçek kişiler Türkiyeli kişilerle eşleştirilmemiştir.
+
+\textbf{Çeviri kalitesi.} 40 maddelik bir örneklem elle incelenmiş, çeviri hata
+oranı \%22{,}5 bulunmuş ve dokuz madde düzeltilerek setlere işlenmiştir. Hattın
+niteliği raporda olduğu gibi aktarılmaktadır: makine çevirisi, model destekli
+inceleme ve insan onayı. Tam insan çevirisi değildir.
+
+\textbf{Koşu seti.} Her koşuda 350 istem kullanılmaktadır: 250 zararlı (200
+HarmBench + 50 Türkiye'ye özgü) ve 100 güvenli kontrol (44 TR-Kontrol, 10 özgün
+Türkçe, 46 XSTest). Üretim 128 token ile sınırlandırılmıştır; reddetme
+davranışı ilk cümlelerde ortaya çıkmaktadır.
+
+\textbf{Etiketleme.} Cevaplar üç etiketle sınıflandırılmaktadır: tam reddetme,
+kısmi uyum ve tam uyum. Sınıflandırma kurallı bir ön tarama aracıdır; insan
+etiketiyle uyumu, etikete göre tabakalı bir örneklem üzerinden Cohen's kappa
+ile raporlanmaktadır. Tabakalama zorunludur: reddetme oranı düşük olduğunda
+rastgele örneklem neredeyse tek sınıftan oluşmakta ve kappa taban oranı
+nedeniyle yorumlanamaz hâle gelmektedir.
+
+\subsection{Aşırı reddetme: çeviriyle taşınamayan kategori}
+\label{sec:homonym}
+
+XSTest'in aşırı reddetme maddelerinin bir bölümü İngilizcenin çok anlamlılığına
+dayanmaktadır: ``execute a plan'' ile ``execute a person'', ``throttle
+downloads'' ile ``throttle a person'' gibi. Türkçede bu sözcük çiftleri
+bulunmadığından, çeviri aşırı reddetmeyi tetikleyen tuzağı ortadan
+kaldırmaktadır. İncelenen örneklemde bu kategorideki maddelerin tamamı bu
+nedenle geçersizleşmiş, ayrıca bir güvenli maddenin çeviride zararlı görünen
+bir isteme dönüştüğü saptanmıştır.
+
+Bu nedenle söz konusu kategori değerlendirmeden çıkarılmış ve yerine Türkçede
+kurulmuş 44 maddelik bir kontrol seti (TR-Kontrol) hazırlanmıştır. Set,
+XSTest'in kategori yapısını yedi başlıkta yansıtmakta, ancak çok anlamlılığı
+Türkçenin kendi sözcüklerinden almaktadır. Çevrilmiş XSTest üzerinden ölçülen
+bir aşırı reddetme oranı, modelden bağımsız nedenlerle olduğundan düşük
+çıkacaktır; bu, çeviriye dayalı güvenlik değerlendirmeleri için genel bir
+uyarıdır.
+
+\subsection{Önyargı: TR-BBQ}
+
+BBQ \cite{parrish2022bbq} tasarımı izlenerek, KoBBQ'nun
+\cite{jin2024kobbq} dile taşıma yöntemine uygun biçimde 25 şablondan 450 soru
+üretilmiştir. Her şablon on sekiz soru vermektedir: iki bağlam türü (belirsiz
+ve netleştirilmiş), iki soru çerçevesi (olumsuz ve olumlu) ve üç döngüsel şık
+sırası. Döngüsel sıralama zorunludur: ``belirlenemez'' şıkkı hep aynı konumda
+olsaydı, o konuma eğilimli bir model önyargısız görünürdü. Üretilen sette
+``belirlenemez'' şıkkı A, B ve C konumlarının her birinde 150 kez yer
+almaktadır.
+
+Belirsiz bağlamdaki önyargı skoru BBQ'daki gibi hesaplanmaktadır: modelin
+``belirlenemez'' demediği durumlarda kalıp yargının hedefini seçme eğilimi,
+belirsiz bağlamdaki hata oranıyla ölçeklenir. Sıfır tarafsızlığı, pozitif
+değerler kalıp yargı yönünde eğilimi gösterir.
+
+\subsection{Verimlilik ve istatistiksel değerlendirme}
+
+Her koşuda model ayak izi, tepe GPU belleği, üretim hızı (sabit uzunlukta
+üretimin üç tekrarının ortalaması) ve Türkçe ansiklopedik metinler üzerinde
+perplexity ölçülmektedir.
+
+Doğruluk farkları aynı sorular üzerinde eşleşmiş olduğundan McNemar testiyle,
+oran farkları iki oranlı $z$ testiyle değerlendirilmekte ve farkların \%95
+güven aralıkları verilmektedir. Küçük setlerde anlamlı fark bulunamaması da bir
+sonuçtur ve bu biçimde raporlanmaktadır.
+
+% =====================================================================
+\section{Deneyler ve Sonuçlar}
+% =====================================================================
+
+Bu bölümde sunulan bütün sayılar \texttt{sonuclar/} klasöründeki ham CSV
+dosyalarından \texttt{kod/05\_analiz.ipynb} ile üretilmiştir:
+\texttt{tablo1} verimlilik, \texttt{tablo2} bilgi doğruluğu, \texttt{tablo3}
+McNemar, \texttt{tablo4}--\texttt{tablo5} güvenlik, \texttt{tablo6}--%
+\texttt{tablo7} ve \texttt{tablo9} önyargı, \texttt{tablo8} hipotez
+kararları. Sayılar iki model için ayrı ayrı verilmekte, hiçbir yerde
+birleştirilmemektedir: iki model farklı veriyle eğitildiği için modeller arası
+mutlak değerler karşılaştırılabilir değildir, karşılaştırılabilir olan her
+model içindeki seviyeler arası değişimdir. Bütün seviyeler bayt bayt aynı
+istemleri ve aynı çözümleme ayarlarını ($do\_sample$ kapalı, greedy)
+görmüştür; dolayısıyla seviyeler arası farklar eşleşmiş
+karşılaştırmalardır.
+
+\subsection{Verimlilik}
+\label{sec:verimlilik}
+
+Tablo~\ref{tab:verimlilik} iki modelde dört seviyenin bellek ayak izini,
+üretim hızını ve perplexity değerini vermektedir. Bütün ölçümler aynı
+hızlandırıcıda (NVIDIA T4, 16~GB, sm\_75) alınmıştır. İki model aynı Llama-3
+8B mimarisini paylaştığı için ayak izi değerleri seviye başına birebir aynıdır;
+bu, ölçüm hattının iki koşu arasında tutarlı çalıştığının da bir denetimidir.
+Perplexity değerleri modeller arasında doğrudan karşılaştırılamaz, çünkü iki
+model farklı veriyle eğitilmiştir; karşılaştırılabilir olan, her model içinde
+seviyeler arası değişimdir.
+
+\begin{table}[htbp]
+\caption{Verimlilik ölçümleri (iki model, tek NVIDIA T4)}
+\label{tab:verimlilik}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
+\hline
+Model & Seviye & Ayak izi (GB) & Tok/sn & Perplexity & Yükleme (sn) \\
+\hline
+Trendyol & FP16      & 14,96 & 14,64 & 4,075 & 116,7 \\
+         & INT8      & 8,46  & 6,28  & 4,146 & 81,5 \\
+         & NF4       & 5,21  & 14,38 & 4,305 & 70,6 \\
+         & GPTQ-4bit & 5,34  & 15,57 & 4,241 & 32,7 \\
+\hline
+Cosmos   & FP16      & 14,96 & 14,53 & 6,755 & 110,7 \\
+         & INT8      & 8,46  & 6,03  & 6,825 & 28,4 \\
+         & NF4       & 5,21  & 13,12 & 7,411 & 122,5 \\
+         & GPTQ-4bit & 5,34  & 15,81 & 7,150 & 11,0 \\
+\hline
+\end{tabular}
+\end{table}
+
+Üç bulgu dikkat çekicidir ve üçü de iki modelde birlikte görülmektedir.
+Birincisi, INT8 belleği \%43,4 düşürmekte ancak üretim hızını
+\emph{kaybetmektedir} (Trendyol'da \%57,1, Cosmos'ta \%58,5);
+\texttt{bitsandbytes} INT8 yolunun çözümleme sırasında yaptığı ölçekleme işi,
+tek bir örnekle çalışan üretimde kazancı silmektedir. İkincisi, aynı bit
+genişliğindeki NF4 ve GPTQ-4bit bellek bakımından birbirine çok yakınken
+(5,21 ve 5,34~GB) perplexity bakımından ayrılmaktadır: Trendyol'da 4,305'e
+karşı 4,241, Cosmos'ta 7,411'e karşı 7,150. Kalibrasyonlu yöntem her iki
+modelde de kalibrasyonsuz yönteme göre daha az dil modelleme kaybı
+vermektedir ve fark ikinci modelde daha büyüktür. Üçüncüsü, GPTQ-4bit
+FP16'dan \emph{daha hızlıdır} (Trendyol \%6,4, Cosmos \%8,8), yani 4-bit
+kuantizasyon bu donanımda bir hız cezası değil kazancıdır. Önceden üretilmiş
+GPTQ ağırlıkları ayrıca yükleme süresini belirgin biçimde kısaltmaktadır
+(Cosmos'ta 110,7~sn yerine 11,0~sn), çünkü kuantizasyon maliyeti koşu anında
+değil bir kereye mahsus ödenmiştir.
+
+Hız ölçümlerinin çekirdek bağımlılığı önemli bir yeniden üretilebilirlik
+tuzağıdır. GPTQ-4bit ağırlıkları T4'te \texttt{gptq\_triton} çekirdeğiyle
+yaklaşık 29~sn/istem hızında koşarken \texttt{gptq\_exllama\_v2} ile 15,57
+token/sn'ye çıkmıştır; iki çekirdekte ölçülen perplexity ise 4,242 ve 4,241
+olarak pratikte aynıdır. Yani çekirdek seçimi hızı belirlemekte, doğruluğu
+belirlememektedir. Tablo~\ref{tab:verimlilik}'teki satırların hangi çekirdekle
+alındığı depoda kayıt altındadır.
+
+\subsection{Bilgi}
+\label{sec:bilgi}
+
+900 soruluk Türkçe çoktan seçmeli set üzerinde makro doğruluk Trendyol
+modelinde FP16 için \%48,8, INT8 için \%48,2, NF4 için \%46,2 ve GPTQ-4bit
+için \%48,1; Cosmos modelinde sırasıyla \%47,9, \%46,9, \%43,1 ve
+\%46,2'dir. Eşleşmiş McNemar testinin sonuçları Tablo~\ref{tab:mcnemar}'da
+verilmiştir: her iki modelde anlamlı düşüş veren tek seviye NF4'tür
+(Trendyol $p=0{,}0286$, Cosmos $p=0{,}0001$), INT8 ve GPTQ-4bit için fark
+dört karşılaştırmanın hiçbirinde anlamlı değildir.
+
+Bu sonuç çalışmanın merkezî bulgusudur ve iki modelde yeniden üretilmiştir.
+NF4 ve GPTQ-4bit aynı bit genişliğinde, aynı bellek bütçesinde ve aynı sorular
+üzerinde karşılaştırılmıştır; buna karşın biri anlamlı doğruluk kaybı
+vermekte, diğeri vermemektedir. Dolayısıyla ölçülen kayıp bit genişliğinin
+değil \emph{yöntemin} sonucudur: kalibrasyon verisi kullanan GPTQ, veri
+kullanmayan NF4'ün kaybını telafi etmektedir. Ayrım ikinci modelde
+güçlenmektedir: Trendyol'da NF4'ün kaybı sınırda anlamlıyken
+($p=0{,}0286$) Cosmos'ta açık biçimde anlamlıdır ($p=0{,}0001$; FP16 lehine
+76 soru, NF4 lehine 33 soru) ve aynı modelde GPTQ-4bit'in kaybı yine
+anlamsızdır ($p=0{,}2031$). AS1'in ``4-bit seviyelerde en az 2 puan düşüş''
+beklentisi bu nedenle NF4 için iki modelde de doğrulanmış (2,6 ve 4,8 puan),
+GPTQ-4bit için iki modelde de çürütülmüştür (0,7 ve 1,7 puan).
+
+\begin{table}[htbp]
+\caption{Bilgi doğruluğunda eşleşmiş McNemar testi (FP16'ya karşı, $n=900$)}
+\label{tab:mcnemar}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrl}
+\hline
+Model & Seviye & FP16$\to$yanlış & FP16$\to$doğru & $p$ & Karar \\
+\hline
+Trendyol & INT8  & 28 & 23 & 0,5754 & anlamsız \\
+         & NF4   & 62 & 39 & 0,0286 & \textbf{anlamlı} \\
+         & GPTQ4 & 47 & 41 & 0,5940 & anlamsız \\
+\hline
+Cosmos   & INT8  & 38 & 29 & 0,3284 & anlamsız \\
+         & NF4   & 76 & 33 & 0,0001 & \textbf{anlamlı} \\
+         & GPTQ4 & 68 & 53 & 0,2031 & anlamsız \\
+\hline
+\end{tabular}
+\end{table}
+
+Tablonun orta iki sütunu kaybın neden ortalama doğrulukta görünmediğini de
+açıklamaktadır: GPTQ-4bit Cosmos'ta 68 soruyu kaybederken 53 soruyu
+kazanmakta, yani kuantizasyon yanıtları hatırı sayılır ölçüde
+\emph{değiştirmekte} ama net bir yön oluşturmamaktadır. Ortalama doğruluğun
+korunması, aynı soruların korunduğu anlamına gelmemektedir.
+
+Ders bazındaki kırılım (Tablo~\ref{tab:bilgi}) kaybın türdeş olmadığını
+göstermektedir: Trendyol'da Biyoloji FP16'da \%47 iken NF4'te \%37'ye
+düşmekte, buna karşılık Kimya \%37'den \%41'e çıkmaktadır; Cosmos'ta
+Kimya \%41'den \%31'e inerken Matematik \%27'den \%28'e çıkmaktadır.
+Hücre başına 100 soru bulunduğundan bu kırılımlar yön göstericidir, kesin
+değildir.
+
+\begin{table}[htbp]
+\caption{Ders bazında doğruluk (\%). Ders başına 100 soru.}
+\label{tab:bilgi}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrrrrr}
+\hline
+ & \multicolumn{4}{c}{Trendyol} & \multicolumn{4}{c}{Cosmos} \\
+Ders & FP16 & INT8 & NF4 & GPTQ4 & FP16 & INT8 & NF4 & GPTQ4 \\
+\hline
+Biyoloji & 47,0 & 42,0 & 37,0 & 43,0 & 41,0 & 40,0 & 35,0 & 39,0 \\
+Kimya & 37,0 & 38,0 & 41,0 & 37,0 & 41,0 & 41,0 & 31,0 & 41,0 \\
+Coğrafya & 58,0 & 57,0 & 53,0 & 56,0 & 50,0 & 49,0 & 44,0 & 46,0 \\
+Tarih & 60,0 & 59,0 & 54,0 & 57,0 & 54,0 & 51,0 & 50,0 & 52,0 \\
+Matematik & 25,0 & 20,0 & 23,0 & 28,0 & 27,0 & 24,0 & 28,0 & 29,0 \\
+Felsefe & 71,0 & 72,0 & 69,0 & 69,0 & 72,0 & 73,0 & 66,0 & 67,0 \\
+Fizik & 34,0 & 36,0 & 32,0 & 37,0 & 42,0 & 40,0 & 40,0 & 38,0 \\
+Din ve Ahlak & 69,0 & 71,0 & 67,0 & 67,0 & 66,0 & 69,0 & 60,0 & 64,0 \\
+Türk Dili ve Ed. & 38,0 & 39,0 & 40,0 & 39,0 & 38,0 & 35,0 & 34,0 & 40,0 \\
+\hline
+\textbf{Makro ort.} & \textbf{48,8} & \textbf{48,2} & \textbf{46,2} & \textbf{48,1}
+ & \textbf{47,9} & \textbf{46,9} & \textbf{43,1} & \textbf{46,2} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Güvenlik}
+\label{sec:guvenlik}
+
+Trendyol modelinde 250 zararlı istem üzerinde ölçülen reddetme oranı FP16
+için \%4,8, INT8 için \%4,4, NF4 için \%4,0 ve GPTQ-4bit için \%5,2'dir. 100 zararsız kontrol istemi
+üzerindeki aşırı reddetme oranı FP16'da \%3,0, diğer üç seviyede \%2,0'dir.
+İki oranlı $z$ testlerinin hiçbiri \%5 düzeyinde anlamlı değildir; reddetme
+için en büyük fark 0,8 puan ($p=0{,}6628$), güven aralıkları sıfırı
+içermektedir.
+
+Bu tablo AS2'nin çürütüldüğü anlamına \emph{gelmemektedir}. Taban etkisi
+söz konusudur: model FP16 hâlinde dahi zararlı istemlerin \%95'ine uyum
+göstermektedir, dolayısıyla kuantizasyonun reddetme davranışını bozup
+bozmadığı bu model üzerinde ölçülebilir değildir. Ölçülemezlik ile reddedilme
+arasındaki ayrım raporda korunmuştur; AS2 için bu model üzerinde verilen
+karar ``test edilemez''dir.
+
+Taban etkisinin model seçiminden kaynaklandığını göstermek, çalışmanın ikinci
+modelini seçme gerekçesidir. DPO ile hizalanmış Cosmos modeli aynı 250 istem
+üzerinde \%10,0 reddetme oranı vermektedir; kısmi reddetmeler de sayıldığında
+oran \%16,4'e çıkmaktadır. Aynı modelin 100 zararsız kontrol istemi üzerindeki
+aşırı reddetme oranı \%0,0'dır, yani model zararsız istemleri gereksiz yere
+reddetmemektedir. Hizalama, taban reddetme oranını iki katına çıkarmakta ve
+AS2'yi ölçülemez olmaktan çıkarmaktadır; ancak bu modelde de ölçüm gücü
+sınırlıdır. Taban oranı \%10,0 ve koşu başına $n=250$ iken iki oranlı $z$
+testinin \%80 güçle yakalayabildiği en küçük düşüş yaklaşık 6,5 puandır
+(\%10,0'dan \%3,5'e). Dolayısıyla ikinci model AS2 için ``kuantizasyon
+reddetmeyi bütünüyle çökertiyor mu'' sorusunu yanıtlayabilir, ``birkaç puan
+aşındırıyor mu'' sorusunu yanıtlayamaz. Bu, güvenlik değerlendirmelerinde
+hizalanmış taban modelin \emph{yanı sıra} birkaç bin istemlik setlerin de
+gerektiğini göstermektedir.
+
+Hizalanmış modelde ölçülebilir hâle gelen soru şudur: kuantizasyon bu
+reddetme davranışını bozmakta mıdır? İki 4-bit seviyesi için de yanıt
+hayırdır. NF4'ün reddetme oranı \%10,8, yani FP16'nın \%10,0'ından 0,8 puan
+\emph{yüksektir} ($z=-0{,}29$, $p=0{,}77$, \%95 GA $[-6{,}2;\ +4{,}6]$);
+GPTQ-4bit'in oranı \%8,8, yani 1,2 puan düşüktür ve bu fark da anlamsızdır
+($p=0{,}65$, \%95 GA $[-3{,}9;\ +6{,}3]$). Aşırı reddetme oranı iki seviyede
+de \%0,0'dan \%1,0'a çıkmakta, bu fark da anlamsız kalmaktadır ($p=0{,}32$).
+İstem bazında bakıldığında FP16'nın reddedip NF4'ün reddetmediği 11 istem,
+tersi yönde 13 istem bulunmaktadır; GPTQ-4bit için bu sayılar 18 ve 15'tir.
+Davranış istem düzeyinde değişmekte ama bir yön oluşturmamaktadır.
+
+Bu, çalışmanın ikinci merkezî bulgusudur: kuantizasyonun hasarı boyutlar
+arasında türdeş değildir. Aynı NF4 seviyesi aynı modelde bilgi doğruluğunda
+anlamlı kayıp vermekte ($p=0{,}0001$) fakat reddetme davranışında ölçülebilir
+bir kayıp vermemektedir. Sıkıştırmanın modelin bildiklerini aşındırması,
+hizalamasını da aynı ölçüde aşındırdığı anlamına gelmemektedir. Ölçüm gücünün
+sınırı burada da geçerlidir: bu set 6,5 puandan küçük düşüşleri ayırt
+edemez, dolayısıyla bulgu ``hiç etki yok'' değil, ``saptanabilir büyüklükte
+etki yok'' biçiminde okunmalıdır.
+
+\begin{table}[htbp]
+\caption{Cosmos (hizalanmış) modelde güvenlik davranışı}
+\label{tab:guvenlik-cosmos}
+\centering
+\small
+\begin{tabular}{lrrrr}
+\hline
+Seviye & Reddetme & Red+kısmi & Kısmi & Aşırı red. \\
+\hline
+FP16 & \%10,0 & \%16,4 & \%6,4 & \%0,0 \\
+INT8 & \%16,4 & \%22,4 & \%6,0 & \%0,0 \\
+NF4  & \%10,8 & \%14,0 & \%3,2 & \%1,0 \\
+GPTQ-4bit & \%8,8 & \%13,2 & \%4,4 & \%1,0 \\
+\hline
+\end{tabular}
+\end{table}
+
+Kısmi uyum oranının \%6,4'ten NF4'te \%3,2'ye, GPTQ-4bit'te \%4,4'e
+inmesi ikincil bir gözlemdir: sıkıştırılmış seviyeler daha az ``yarım'' yanıt
+vermekte, yanıtlar ya tam reddetmeye ya da tam uyuma kaymaktadır. 250 istem
+üzerinde bunlar 8 ve 5 yanıtlık farklardır ve yön göstericidir. Aynı yönde,
+red ve kısmi reddetmenin toplamı \%16,4'ten \%14,0 ve \%13,2'ye
+inmektedir; bu toplam üzerinden bakıldığında küçük bir aşınma görülmekte,
+ancak farklar yine anlamlılık eşiğinin altında kalmaktadır.
+
+Aynı modelin INT8 seviyesi beklenmeyen bir sonuç vermiştir. Reddetme oranı
+FP16'nın \%10,0'ından \%16,4'e, yani 6,4 puan \emph{yükselmiştir} ve bu fark
+iki oranlı $z$ testinde anlamlıdır ($z=2{,}11$, $p=0{,}0345$, \%95 GA
+$[+0{,}5;\ +12{,}3]$). İstem bazında FP16'nın reddedip INT8'in reddetmediği 8
+istem, tersi yönde 24 istem bulunmaktadır; yani değişim iki yöne eşit
+dağılmamakta, tek yöne eğilmektedir. Kısmi reddetmeler de sayıldığında oran
+\%16,4'ten \%22,4'e çıkmaktadır. Aşırı reddetme oranı \%0,0'da kalmakta,
+dolayısıyla bu yükseliş zararsız istemlere taşmamaktadır.
+
+Bu, çalışmada güvenlik ekseninde saptanan tek anlamlı farktır ve AS2'nin
+öngördüğü yönün \emph{tersidir}: hipotez reddetmenin zayıflamasını
+beklemekteydi, ölçüm güçlenme göstermektedir. Üç ihtiyat kaydı gerekmektedir.
+Birincisi, otomatik etiketleyicinin $\kappa = 0{,}541$'lik güvenilirliği bu
+büyüklüğü olduğu gibi okumaya izin vermez: INT8'de yeni RED etiketi alan 24
+yanıt elle incelendiğinde çoğu gerçek reddetmedir, ancak en az ikisi bu
+bölümde tarif edilen ``üzgünüm'' yanlış pozitifidir --- örneğin bir bomba
+tehdidi metnini fiilen yazan, dolayısıyla uyum gösteren bir yanıt. İkincisi,
+tabakalanmış düzeltme uygulandığında oranlar FP16 için \%10,9 ve INT8 için
+\%14,0 olmakta, fark 6,4 puandan 3,1 puana inmektedir; yön korunmakta,
+büyüklük küçülmektedir. Üçüncüsü, aynı taban çizgisine karşı üç seviye
+sınandığı hâlde çoklu test düzeltmesi yapılmamıştır ve $p=0{,}0345$ Bonferroni
+eşiğinin ($0{,}05/3 = 0{,}017$) üzerindedir.
+
+Bu nedenle bulgu ``INT8 modeli daha güvenli yapmaktadır'' biçiminde değil,
+``INT8'in reddetme davranışı FP16'dan ölçülebilir biçimde farklıdır ve fark
+hipotezin öngördüğü yönün tersindedir'' biçiminde raporlanmaktadır. Akla
+yatkın mekanizma, \texttt{LLM.int8()}'in ürettiği yanıtların FP16'dan
+sistematik biçimde ayrışması ve bu ayrışmanın hizalamayı zayıflatmak yerine
+yanıtları daha temkinli bir kalıba kaydırmasıdır; bunun doğrulanması bu
+çalışmanın kapsamı dışındadır ve ayrı bir deney gerektirmektedir. Not
+edilmesi gereken nokta şudur: üç sıkıştırma seviyesinin ikisi reddetmeyi
+ölçülebilir biçimde değiştirmemekte, biri ise hipotezin tersi yönde
+değiştirmektedir; hiçbiri AS2'nin öngördüğü aşınmayı göstermemektedir.
+
+Taban etkisinin bir çeviri yapaylığı olup olmadığını denetlemek için
+\texttt{kod/ceviri\_kontrol.py} ile 50 zararlı istem hem Türkçe çevirisiyle hem
+İngilizce özgün metniyle aynı modele sorulmuştur. Türkçede reddetme oranı \%4,0,
+İngilizce özgün metinlerde \%2,0 çıkmıştır; 50 istemin 47'sinde iki dildeki
+davranış aynıdır. Yani düşük reddetme oranı çevirinin istemleri yumuşatmasından
+kaynaklanmamaktadır, modelin kendisi hizalanmamıştır. Bu denetimin
+sınırlılığı, $n=50$ ile dilller arası farkın büyüklüğünün kestirilememesidir;
+denetim yalnızca \%95'lik uyumu açıklayacak büyüklükte bir yumuşamayı
+dışlamaktadır.
+
+Otomatik etiketlemenin güvenilirliği, etiket sınıfına göre tabakalanmış 159
+yanıtlık bir örneklem üzerinde elle etiketlemeyle karşılaştırılmıştır.
+Ham uyum \%79{,}2, Cohen's kappa $\kappa = 0{,}541$'dir.
+Bu değer, yöntem bölümünde koşular öncesinde belirlenen 0{,}60 eşiğinin
+altındadır; dolayısıyla reddetme oranları, aşağıdaki düzeltmeyle birlikte
+verilmektedir.
+
+Karışıklık matrisi hatanın iki yönlü olduğunu göstermektedir. Otomatik olarak
+RED etiketlenen 40 yanıtın yalnızca 22'si insan etiketinde de REDdir; 13'ü
+aslında uyum göstermektedir. Tipik örnek, zararlı isteme uyan ancak metninde
+``üzgünüm'' geçen bir yanıttır: kurallı sınıflandırıcı bu kelimeyi reddetme
+işareti saymaktadır. Ters yönde, otomatik olarak UYUM etiketlenen 110
+yanıtın 7'si insan etiketinde REDdir; bunlar reddetmeyi uzun bir açıklamanın
+içine gömen yanıtlardır.
+
+Tabaka başına hata oranları ($P(\text{insan}=$RED$\mid$otomatik$)$ sırasıyla
+0{,}55, 0{,}00 ve 0{,}064) tüm sete uygulandığında düzeltilmiş reddetme
+oranları FP16 için \%8{,}6, INT8 için \%8{,}5, NF4 için \%8{,}2 ve
+GPTQ-4bit için \%8{,}9 olmaktadır. Yani kurallı sınıflandırıcı, kaçırdığı
+gömülü reddetmeler nedeniyle oranları olduğundan düşük göstermektedir.
+Düzeltme, seviyeler arasındaki sıralamayı ve farkların büyüklüğünü
+değiştirmemektedir: en büyük fark 0{,}7 puandır ve taban etkisi
+Bölüm~\ref{sec:guvenlik}'de anlatıldığı gibi devam etmektedir. UYUM
+tabakasının hata oranı 110 yanıta dayandığından düzeltilmiş değerlerin
+belirsizliği yüksektir ve bunlar kesin oran değil, büyüklük kestirimi olarak
+okunmalıdır.
+
+\subsection{Önyargı}
+\label{sec:onyargi}
+
+TR-BBQ setinde belirsiz bağlamdaki BBQ önyargı skoru Trendyol modelinde FP16
+için 0,213, INT8 için 0,200, NF4 için 0,133 ve GPTQ-4bit için 0,267; Cosmos
+modelinde sırasıyla 0,073, 0,120, 0,087 ve 0,020'dir. Bileşik skora
+bakıldığında Trendyol'da NF4 en ``az önyargılı'' seviye gibi görünmektedir;
+bu, skorun nasıl kurulduğundan doğan bir yanılsamadır.
+
+Bileşik skorun bileşenleri ayrıştırıldığında asıl örüntü ortaya çıkmaktadır.
+Trendyol modelinde belirsiz bağlamda ``belirlenemez'' yanıtını verme oranı
+sıkıştırmayla birlikte tek yönlü biçimde erimektedir: FP16 \%69,3, INT8
+\%64,0, GPTQ-4bit \%54,7, NF4 \%45,3. Aynı doğrultuda, kalıp yargılı seçeneği
+seçme oranı \%26,0'dan \%28,0, \%36,0 ve \%34,0'e yükselmektedir. Yani sıkıştırma modelin
+\emph{bilgi yokluğunda çekimser kalma} yeteneğini azaltmakta ve açığa çıkan
+yanıtlar kalıp yargılı seçeneğe kaymaktadır. $s_{amb} = (1-acc_{amb}) \cdot
+(2p_{s}-1)$ biçimindeki bileşik skor ($p_{s}$: kalıp yargılı seçeneğin
+seçilme oranı), çekimserlikteki bu erimeyi
+$(1-acc_{amb})$ çarpanı üzerinden hem ödüllendirip hem cezalandırdığı için
+örüntüyü gizlemektedir. Önyargı raporlamasında bileşik skorun yanında
+çekimserlik oranının da verilmesi gerektiği sonucuna varıyoruz.
+
+Netleştirilmiş bağlamda Trendyol'un dört seviyesinin de doğruluğu
+\%98,7--99,7 aralığındadır; yani bütün seviyeler bağlam açıkça verildiğinde
+doğru yanıtı bulabilmektedir. Erime yalnızca belirsizlik altındaki
+davranıştadır.
+
+\textbf{Erime ikinci modelde yeniden üretilmemektedir.} Cosmos modelinde
+çekimserlik oranı dört seviyede \%82,7--87,3 aralığında kalmakta ve tek yönlü
+bir eğilim göstermemektedir: en yüksek değer GPTQ-4bit'e (\%87,3), en düşük
+değer INT8'e (\%82,7) aittir, FP16 ise ortadadır (\%86,0). Kalıp yargılı
+seçeneği seçme oranı da aynı biçimde dalgalıdır (\%10,7, \%14,7, \%12,7,
+\%7,3) ve dört seviyenin tamamı Trendyol'un en iyi seviyesinden daha
+çekimserdir. Dolayısıyla çekimserlik erimesi kuantizasyonun kaçınılmaz bir
+sonucu değil, \emph{taban modelin çekimserlik payına bağlı} bir sonuçtur:
+başlangıçta \%69 olan bir çekimserlik payı sıkıştırmayla aşınmakta, \%86
+olan pay aşınmamaktadır. İki model birlikte okunduğunda bu, hizalamanın
+kuantizasyona karşı bir tampon işlevi gördüğü yorumunu desteklemektedir ve
+yorumun bir modelden genellenemeyeceğini de göstermektedir.
+
+Cosmos'ta netleştirilmiş bağlam doğruluğu FP16, INT8 ve NF4 için
+\%99,0--99,3 iken GPTQ-4bit'te \%96,3'e inmektedir. Bu, GPTQ-4bit'in iki
+model boyunca tek belirgin kaybıdır ve çekimserliğin değil biçime uymanın
+bozulduğu yerdedir.
+
+\begin{table}[htbp]
+\caption{Belirsiz bağlamdaki davranış (\%), TR-BBQ}
+\label{tab:onyargi-ozet}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrr}
+\hline
+Model & Seviye & ``belirlenemez'' & kalıp yargı & BBQ skoru \\
+\hline
+Trendyol & FP16  & 69,3 & 26,0 & 0,213 \\
+         & INT8  & 64,0 & 28,0 & 0,200 \\
+         & NF4   & 45,3 & 34,0 & 0,133 \\
+         & GPTQ4 & 54,7 & 36,0 & 0,267 \\
+\hline
+Cosmos   & FP16  & 86,0 & 10,7 & 0,073 \\
+         & INT8  & 82,7 & 14,7 & 0,120 \\
+         & NF4   & 83,3 & 12,7 & 0,087 \\
+         & GPTQ4 & 87,3 &  7,3 & 0,020 \\
+\hline
+\end{tabular}
+\end{table}
+
+Döngüsel seçenek sıralaması bir konum etkisini açığa çıkarmıştır. Trendyol
+modelinde kalıp yargılı seçenek üçüncü sırada sunulduğunda seçilme oranı
+\%64--\%92 aralığına çıkmakta, aynı seçenek birinci sırada sunulduğunda
+\%0--\%12'ye düşmektedir. Sıralama sabitlenmiş olsaydı bu model için ölçülen
+önyargı skoru bütünüyle bu yapaylığın eseri olabilirdi. Cosmos modelinde aynı
+etki neredeyse yoktur: üçüncü sıradaki seçim oranı \%0--\%20 aralığında
+kalmakta ve en yüksek değer üçüncü sırada değil ikinci sırada
+görülmektedir (olumsuz çerçevede \%24--\%28). Yani konum duyarlılığı
+kuantizasyon seviyesinin değil \emph{modelin} bir özelliğidir ve bir modelde
+ölçülen önyargının ne kadarının biçim etkisi olduğu modele göre
+değişmektedir. Konum çeşitlemesi bu nedenle TR-BBQ türü setlerde zorunludur:
+çeşitleme olmadan iki modelin önyargı skorları karşılaştırılamaz, çünkü
+yapaylığın payı ikisinde aynı değildir.
+
+Kategori kırılımı (Tablo~\ref{tab:onyargi-kategori}) kaybın nerede
+toplandığını göstermektedir. Trendyol'da etnik köken FP16'da \%0,0 kalıp yargı
+seçimiyle en temiz kategori iken NF4 ve GPTQ-4bit'te \%22,2'ye çıkmakta,
+uyruk \%8,3'ten \%25,0'e yükselmektedir. Cosmos'ta bölge, cinsel yönelim,
+etnik köken ve uyruk kategorileri dört seviyenin tamamında \%0,0'da
+kalmaktadır; bu modelde kalıp yargı seçimi yalnızca yaş, sosyoekonomik durum
+ve engellilik kategorilerinde toplanmaktadır. İki model bir arada, en yüksek
+değerlerin iki modelde de yaş ve sosyoekonomik durumda çıktığını
+göstermektedir. Kategori başına 36 veya daha az örnek bulunduğundan bu
+değerler yön göstericidir.
+
+\begin{table}[htbp]
+\caption{Kategori bazında kalıp yargı seçme oranı (\%, belirsiz bağlam)}
+\label{tab:onyargi-kategori}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrrrrr}
+\hline
+ & \multicolumn{4}{c}{Trendyol} & \multicolumn{4}{c}{Cosmos} \\
+Kategori & FP16 & INT8 & NF4 & GPTQ4 & FP16 & INT8 & NF4 & GPTQ4 \\
+\hline
+Bölge & 33,3 & 33,3 & 33,3 & 50,0 & 0,0 & 0,0 & 0,0 & 0,0 \\
+Cinsel yönelim & 33,3 & 33,3 & 33,3 & 33,3 & 0,0 & 0,0 & 0,0 & 0,0 \\
+Cinsiyet & 19,4 & 22,2 & 27,8 & 30,6 & 0,0 & 2,8 & 2,8 & 0,0 \\
+Din & 22,2 & 22,2 & 38,9 & 38,9 & 11,1 & 22,2 & 11,1 & 11,1 \\
+Engellilik & 16,7 & 16,7 & 33,3 & 33,3 & 16,7 & 33,3 & 25,0 & 25,0 \\
+Etnik köken & 0,0 & 11,1 & 22,2 & 22,2 & 0,0 & 0,0 & 0,0 & 0,0 \\
+Fiziksel görünüm & 33,3 & 33,3 & 33,3 & 50,0 & 16,7 & 16,7 & 0,0 & 0,0 \\
+Sosyoekonomik & 55,6 & 50,0 & 44,4 & 44,4 & 22,2 & 22,2 & 27,8 & 5,6 \\
+Uyruk & 8,3 & 8,3 & 25,0 & 16,7 & 0,0 & 0,0 & 0,0 & 0,0 \\
+Yaş & 50,0 & 55,6 & 50,0 & 55,6 & 38,9 & 44,4 & 44,4 & 27,8 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{AWQ-4bit: donanım kaynaklı ölçülemezlik}
+\label{sec:awq}
+
+AWQ-4bit seviyesi planlanmış, kalibrasyonu yapılmış, ancak kullanılan
+donanımda \emph{koşturulamamıştır}. \texttt{gptqmodel}~7.10.0'ın AWQ referans
+çekirdekleri (\texttt{gptqmodel\_awq\_ops}) derleme sırasında
+\texttt{cp.async} ve \texttt{.m16n8k16} PTX özelliklerini kullanmakta, bu
+özellikler ise \texttt{sm\_80} (Ampere) ve üstünü gerektirmektedir. Çalışmanın
+yürütüldüğü T4 \texttt{sm\_75} (Turing) olduğundan \texttt{ptxas} derlemeyi
+şu hatayla kesmektedir:
+
+\begin{quote}\small
+\texttt{error: Feature 'cp.async' requires .target sm\_80 or higher}
+\end{quote}
+
+Bu, raporun kendi başına bir bulgusudur. Kuantizasyon literatürü yöntemleri
+genellikle doğruluk ve bellek ekseninde karşılaştırmakta, \emph{erişilebilirlik}
+eksenini dışarıda bırakmaktadır. Oysa öğrenci, bireysel araştırmacı veya küçük
+ölçekli laboratuvarın elindeki ücretsiz hızlandırıcılar (Colab ve Kaggle'da
+T4) Turing sınıfındadır: bu donanımda NF4 ve GPTQ-4bit doğrudan çalışmakta,
+AWQ-4bit referans çekirdekleriyle çalışmamaktadır.
+
+Kütüphanenin kendi kaynak kodu bir çıkış yolu sunmaktadır. \texttt{gptqmodel}
+ROCm ve CPU makinelerinde paketlemeyi saf torch çekirdeğine devretmekte ve
+belgesinde bu çekirdeğin ``özdeş AWQ GEMM düzenini ürettiği'' belirtilmektedir;
+aynı yol Turing için de kullanılabilmektedir. Bu yolla derleme engeli
+aşılmış, ancak ikinci bir sınır ortaya çıkmıştır: saf torch paketleme,
+kalibrasyon girdilerini ana bellekte tuttuğu için 512 örnekle Colab'ın
+12{,}7~GB'ını aşmakta ve süreç işletim sistemi tarafından
+sonlandırılmaktadır. Örnek sayısı 128'e düşürüldüğünde kuantizasyon döngüsü
+ilerlemiş, fakat koşu yine bellek nedeniyle tamamlanamamıştır.
+
+Dolayısıyla AWQ-4bit bu çalışmada ölçülememiştir ve bu, yöntemin değil
+donanımın sonucudur. Bulgu iki katmanlıdır: AWQ'nun hazır çekirdekleri
+Ampere öncesi donanımda derlenmemekte, derleme engelini aşan taşınabilir yol
+ise ücretsiz Colab'ın bellek bütçesine sığmamaktadır. NF4 ve GPTQ-4bit aynı
+donanımda bu engellerin hiçbirine çarpmamıştır. Yöntem seçiminde bit
+genişliği ve perplexity kadar hedef donanımın hesaplama yeteneği ve ana
+bellek bütçesi de belirleyicidir.
+
+\subsection{Hipotezlerin değerlendirilmesi}
+\label{sec:hipotezler}
+
+Tablo~\ref{tab:hipotezler} AS1--AS5 için seviye bazında kararları
+toplamaktadır.
+
+\begin{table}[htbp]
+\caption{Hipotez kararları, iki model}
+\label{tab:hipotezler}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llp{1.75cm}lp{1.75cm}l}
+\hline
+ & & \multicolumn{2}{c}{Trendyol} & \multicolumn{2}{c}{Cosmos} \\
+Hipotez & Seviye & Ölçüm & Karar & Ölçüm & Karar \\
+\hline
+AS1 bilgi & INT8 & +0,6 p. ($p=0{,}58$) & uyumlu & +1,0 p. ($p=0{,}33$) & uyumlu \\
+          & NF4 & +2,6 p. ($p=0{,}029$) & uyumlu & +4,8 p. ($p=0{,}0001$) & uyumlu \\
+          & GPTQ4 & +0,7 p. ($p=0{,}59$) & çürütüldü & +1,7 p. ($p=0{,}20$) & çürütüldü \\
+AS2 güvenlik & NF4 & +0,8 p. & ölçülemez & $-0{,}8$ p. ($p=0{,}77$) & farklı \\
+ & GPTQ4 & $-0{,}4$ p. & ölçülemez & $+1{,}2$ p. ($p=0{,}65$) & farklı \\
+ & INT8 & +0,4 p. & ölçülemez & $-6{,}4$ p. ($p=0{,}035$) & ters yön \\
+AS3 aşırı red. & NF4 & +1,0 p. & uyumlu & $-1{,}0$ p. ($p=0{,}32$) & uyumlu \\
+ & GPTQ4 & +1,0 p. & uyumlu & $-1{,}0$ p. ($p=0{,}32$) & uyumlu \\
+ & INT8 & +1,0 p. & uyumlu & 0,0 p. & uyumlu \\
+AS4 önyargı & INT8 & $-0{,}013$ & farklı & $+0{,}047$ & farklı \\
+            & NF4 & $-0{,}080$ & farklı & $+0{,}014$ & farklı \\
+            & GPTQ4 & $+0{,}054$ & uyumlu & $-0{,}053$ & farklı \\
+AS5 denge & INT8 & \%98,9 / \%56,6 & farklı & \%97,9 / \%56,6 & farklı \\
+          & NF4 & \%94,8 / \%34,8 & farklı & \%90,0 / \%34,8 & farklı \\
+          & GPTQ4 & \%98,6 / \%35,7 & uyumlu & \%96,5 / \%35,7 & uyumlu \\
+\hline
+\multicolumn{6}{l}{\scriptsize AS5 ölçümü: korunan doğruluk / FP16'ya göre bellek payı.} \\
+\end{tabular}
+\end{table}
+
+AS1 bit genişliğine göre kurulduğu biçimiyle iki modelde de çürütülmüştür:
+kayıp bit genişliğinden değil yöntemden gelmektedir. AS2 Trendyol'da taban
+etkisi nedeniyle ölçülemez durumdadır; Cosmos'un \%10,0'lık taban reddetme
+oranı hipotezi ölçülebilir kılmış ve iki 4-bit seviyesinde de beklentiyi
+\emph{çürütmüştür}: reddetme oranı NF4'te 0,8 puan yükselmiş ($p=0{,}77$),
+GPTQ-4bit'te 1,2 puan düşmüş ($p=0{,}65$), ikisi de anlamsızdır. INT8 seviyesinde ise fark anlamlıdır ($p=0{,}035$) fakat hipotezin tersi
+yönündedir: reddetme oranı 6,4 puan yükselmektedir. Dolayısıyla AS2 bu modelin
+üç seviyesinde de desteklenmemektedir. AS3 iki modelin bütün seviyelerinde
+doğrulanmıştır; aşırı reddetme kuantizasyondan etkilenmemektedir. AS4 bileşik
+skor üzerinden yalnızca Trendyol'un GPTQ-4bit seviyesinde doğrulanmıştır,
+ancak Bölüm~\ref{sec:onyargi}'de gösterildiği gibi bu kararlar
+çekimserlikteki erimeyi gizlemektedir; bileşenler üzerinden bakıldığında AS4
+Trendyol'un dört seviyesinde desteklenmekte, Cosmos'ta ise desteklenmemektedir
+(çekimserlik erimemektedir). AS5'in iki eşiğini birlikte karşılayan tek seviye
+iki modelde de GPTQ-4bit'tir; bu, çalışmanın en doğrudan pratik çıktısıdır.
+
+% =====================================================================
+\section{Tartışma}
+% =====================================================================
+
+Bulguların tamamı tek bir noktaya işaret etmektedir: \emph{kuantizasyonun
+bedeli bit genişliğiyle değil yöntemle ölçülmelidir}. NF4 ve GPTQ-4bit aynı
+bit genişliğinde, birbirine 0,13~GB uzaklıkta bir bellek bütçesinde ve aynı
+istemler üzerinde karşılaştırılmış, buna karşın bilgi doğruluğunda zıt
+kararlar vermiştir ve bu zıtlık iki modelde de aynı yönde çıkmıştır
+(Trendyol: NF4 $p=0{,}029$, GPTQ-4bit $p=0{,}59$; Cosmos: NF4 $p=0{,}0001$,
+GPTQ-4bit $p=0{,}20$). İki bağımsız modelde yeniden üretilmiş olması, bulgunun
+tek bir modelin kuantizasyona verdiği tepkiden değil yöntemler arasındaki
+yapısal farktan geldiğini göstermektedir. ``4-bit'e inmek şu kadar doğruluk
+kaybettirir'' biçimindeki yaygın ifade bu nedenle eksiktir; kalibrasyon verisi
+kullanıp kullanmamak, bit genişliğinin kendisinden daha belirleyicidir.
+
+İkinci bulgu, sıkıştırmanın en görünür etkisinin doğruluk değil
+\emph{çekimserlik} olduğudur. Trendyol modelinde dört seviye netleştirilmiş
+bağlamda neredeyse aynı doğrulukla (\%98,7--99,7) çalışmakta, fakat belirsiz
+bağlamda ``belirlenemez'' deme oranı \%69,3'ten \%45,3'e düşmektedir.
+Sıkıştırılmış model bilmediğini söylemek yerine seçenek üretmekte, ürettiği
+seçenek de kalıp yargılı olana kaymaktadır. Bu, önyargı ölçütlerinin bileşik
+skorlarla raporlanmasının neyi kaçırdığını göstermektedir ve güvenlik
+açısından pratik sonucu vardır: sıkıştırılmış modelin ``bilmiyorum'' demeyi
+bırakması, yanlış bilgi üretme riskini doğrudan artırır.
+
+İkinci model bu bulguyu sınırlamakta ve böylece yorumunu değiştirmektedir.
+DPO ile hizalanmış Cosmos modelinde çekimserlik oranı dört seviyede
+\%82,7--87,3 aralığında kalmakta, hiçbir yönde erimemektedir. Yani erime
+kuantizasyonun bir yan etkisi değil, \emph{aşınmaya açık bir çekimserlik
+payının} kuantizasyonla aşınmasıdır: hizalama bu payı yükselttiğinde
+sıkıştırma onu tüketememektedir. Pratik sonuç şudur: bir modeli
+sıkıştırmadan önce sorulması gereken soru ``kaç bit'' değil, ``bu modelin
+çekimserlik payı ne kadar''dır. İki modelin karşıtlığı aynı zamanda tek
+modelli kuantizasyon çalışmalarının neden yanıltıcı olabileceğinin bir
+örneğidir; Trendyol tek başına okunsaydı erime genel bir kural gibi
+sunulabilirdi.
+
+Üçüncü bulgu yöntemsel bir uyarıdır. Çalışmanın ilk GPTQ-4bit koşusu
+3.281.024 perplexity ve anlamsız metin üretmiştir; neden, GPTQModel ile
+yazılmış ağırlıkların \texttt{transformers} ile sessizce yanlış yüklenmesidir.
+Aynı ağırlıklar doğru kütüphaneyle yüklendiğinde perplexity 4,241'e
+inmektedir. Kuantize ağırlıkların ölçülen kalitesi, ağırlıkların kendisi kadar
+yükleme yoluna ve çekirdek seçimine de bağlıdır; kuantizasyon karşılaştırması
+yapan çalışmaların yükleme hattını açıkça kayda geçirmesi gerekmektedir.
+Benzer biçimde \texttt{gptq\_triton} ile \texttt{gptq\_exllama\_v2} arasındaki
+yaklaşık 2 kat hız farkı, perplexity aynı kalırken ortaya çıkmaktadır: hız
+sayıları çekirdek belirtilmeden karşılaştırılamaz.
+
+Dördüncü bulgu, konum duyarlılığının da modele bağlı olduğudur. Trendyol'da
+kalıp yargılı seçenek üçüncü sıraya konduğunda seçilme oranı \%92'ye kadar
+çıkmakta, Cosmos'ta ise aynı etki \%20'nin altında kalmaktadır. Bu, önyargı
+skorlarının modeller arası karşılaştırmasını doğrudan etkilemektedir: seçenek
+sırası sabit tutulan bir düzende iki modelin skorları, önyargı farkını değil
+biçim duyarlılığı farkını ölçmüş olurdu.
+
+Son olarak, taban etkisi güvenlik değerlendirmesi için model seçiminin
+yöntemin bir parçası olduğunu göstermektedir. Varsayılan hâlinde zararlı
+istemlerin \%95'ine uyum gösteren bir model üzerinde ``kuantizasyon güvenliği
+bozuyor mu'' sorusu ölçülemez; sorunun yanıtlanabilmesi için reddetme oranı
+yüksek, hizalanmış bir taban modeli gerekmektedir. Çeviri denetimi bu
+ölçülemezliğin bir çeviri yapaylığı olmadığını göstermiştir. Çalışmaya DPO ile
+hizalanmış ikinci modelin eklenmesi tam olarak bu gerekçeyle yapılmış ve taban
+reddetme oranını \%4,8'den \%10,0'a çıkarmıştır; aşırı reddetme oranının bu
+modelde \%0,0 olması, yükselen reddetmenin genel bir çekingenlikten değil
+hedefli hizalamadan geldiğini göstermektedir. Buna karşılık \%10,0'lık taban
+bile 250 istemlik bir sette yalnızca yaklaşık 6,5 puanlık düşüşleri
+yakalayabilmektedir; güvenlik boyutunun küçük etkilerle çalışabilmesi için
+hem hizalanmış taban model hem de birkaç bin istemlik set gerekmektedir.
+Bu sette yakalanabilen tek fark, INT8 seviyesinde ve hipotezin tersi
+yönündedir: reddetme oranı 6,4 puan yükselmektedir ($p=0{,}035$; tabakalanmış
+düzeltmeden sonra 3,1 puan). Kuantizasyonun hizalama üzerindeki etkisi, en
+azından bu iki model ve bu set üzerinde, ``aşınma'' biçiminde değil
+``seviyeye bağlı ve yönü öngörülemeyen kayma'' biçiminde görünmektedir ---
+sıkıştırılmış bir modelin güvenlik davranışının, bit genişliğinden
+okunamayacağı ve her seviye için ayrıca ölçülmesi gerektiği sonucu
+çıkmaktadır.
+
+% =====================================================================
+\section{Sınırlılıklar}
+\label{sec:sinirliliklar}
+% =====================================================================
+
+\textbf{Çeviri hattı.} Güvenlik istemleri makine çevirisiyle Türkçeye
+aktarılmış, bir örneklem üzerinde model destekli inceleme yapılmış ve insan
+onayıyla düzeltilmiştir. Tam insan çevirisi değildir; ölçülen çeviri hata oranı
+\%22{,}5'tir (40 satırlık örneklemde 9 hata). Bu oranın denetimin sıkılığına
+bağlı olduğunu belirtmek gerekir: aynı örneklem üzerinde yapılan daha sıkı bir
+ikinci inceleme, üslup düzeyindeki aksaklıkları da hata sayarak 15 hata
+(\%37{,}5) bulmuştur. Koşularda uygulanan düzeltmeler ilk incelemenin
+düzeltmeleridir; ikinci inceleme yalnızca oranın bir alt sınır olduğunu
+göstermek için kayda geçirilmiştir. Bölüm~\ref{sec:homonym}'de anlatılan kategori sorunu, çeviriye
+dayalı güvenlik değerlendirmelerinin genel bir sınırlılığıdır.
+
+\textbf{Sistem istemi.} Değerlendirmeler sistem istemi olmadan yapılmıştır.
+Birçok sohbet modeli reddetme davranışını büyük ölçüde sistem isteminden
+almaktadır; dolayısıyla buradaki reddetme oranları, modelin bir güvenlik
+sistem istemiyle kullanıldığı dağıtım senaryosunu değil, varsayılan davranışını
+yansıtmaktadır. Bir güvenlik sistem istemiyle yapılacak duyarlılık koşusu
+planlanmış, ancak zaman kısıtı nedeniyle bu çalışmaya dâhil edilememiştir;
+sistem isteminin reddetme oranı üzerindeki etkisinin ölçülmesi açık bir
+sonraki adımdır.
+
+\textbf{Taban etkisi.} Bir modelin reddetme oranı zaten çok düşükse,
+kuantizasyonun bu oranı daha da düşürdüğü ölçülemez. Böyle bir durumda AS2
+reddedilmiş değil, o model üzerinde test edilemez durumdadır; bu ayrım raporda
+korunmaktadır.
+
+\textbf{Set büyüklüğü.} Kategori bazındaki hücreler az sayıda soruya
+dayanmaktadır; kategori kırılımları yön göstericidir, kesin değildir.
+
+\textbf{Donanım.} Bütün ölçümler tek bir NVIDIA T4 (16~GB, sm\_75)
+üzerinde alınmıştır. Bu seçim bilinçlidir: çalışmanın hedef kitlesi olan
+öğrenci ve küçük laboratuvar ortamlarında ücretsiz erişilebilen hızlandırıcı
+budur. Ancak iki sonucu vardır. Birincisi, AWQ-4bit'in referans çekirdekleri
+\texttt{sm\_80} gerektirdiği için bu seviye koşturulamamıştır
+(Bölüm~\ref{sec:awq}). İkincisi, üretim hızı sayıları yalnızca bu donanım
+sınıfı içinde yorumlanabilir; Ampere veya üstü donanımda Marlin gibi
+çekirdeklerin devreye girmesiyle seviyeler arası hız sıralaması değişebilir.
+
+\textbf{Yükleme hattı ve çekirdek.} Kalibrasyonlu ağırlıkların (GPTQ, AWQ)
+ölçülen kalitesi hangi kütüphaneyle yüklendiğine bağlıdır: aynı GPTQ-4bit
+ağırlıkları \texttt{transformers} ile yüklendiğinde 3.281.024, GPTQModel ile
+yüklendiğinde 4,241 perplexity vermiştir ve ilk durumda hata mesajı
+üretilmemiştir. Çekirdek seçimi ise hızı yaklaşık 2 kat değiştirmekte,
+doğruluğu değiştirmemektedir. Bu nedenle rapordaki her satırın yükleme yolu ve
+çekirdeği depoda kayıt altındadır; başka bir hatla alınan sayılar buradaki
+sayılarla doğrudan karşılaştırılamaz.
+
+\textbf{Model sayısı ve ailesi.} Dört seviye (FP16, INT8, NF4, GPTQ-4bit)
+dört boyutun tamamında iki modelde ölçülmüştür. İki modelin ikisi de Llama-3 8B tabanlıdır,
+yani bulgular mimari çeşitliliği değil hizalama yöntemi çeşitliliğini
+(talimat ayarı ve DPO) kapsamaktadır. Mistral veya Qwen tabanlı Türkçe
+modellerde aynı örüntülerin çıkacağı gösterilmemiştir. Ayrıca iki modelin
+karşıtlık gösterdiği yerlerde (çekimserlik erimesi, konum duyarlılığı)
+elimizde iki gözlem bulunmaktadır; bu, mekanizmayı önermeye yeter, nicel bir
+yasa kurmaya yetmez.
+
+\textbf{Otomatik etiketleme.} Reddetme sınıflandırması kurallıdır. Kappa değeri
+0{,}60'ın altında kalırsa oranlar elle doğrulanmış örneklemle birlikte
+verilmektedir.
+
+% =====================================================================
+\section{Etik Beyan}
+% =====================================================================
+
+Çalışmada kullanılan zararlı istemler bu proje için yazılmamış, kamuya açık ve
+akademik olarak yerleşik değerlendirme setlerinden (HarmBench, XSTest)
+alınmıştır. İstem metinleri herkese açık depoda düz metin olarak
+bulunmamaktadır: depo, kimlik, kaynak, kategori, uzunluk ve metnin sha1
+özetini içeren, metin taşımayan iki manifesto ile istemlerin parolayla
+şifrelenmiş arşivini tutmaktadır. Arşivin anahtarı PBKDF2-HMAC-SHA256 ile
+480.000 turda türetilmekte ve içerik Fernet ile şifrelenmektedir; parola ne
+depoda ne bu raporda yer almaktadır. Setlerin şifresiz hâli sürüm denetimi
+dışında bırakılmıştır. Çeviri hattı determinist olduğundan arşive erişimi
+olmayan bir okuyucu da setleri aynı komutlarla yeniden üretebilmektedir. Yerelleştirmede gerçek kurum ve marka
+adları dolandırıcılık senaryolarının hedefi olarak kullanılmamış, kaynak
+setlerde geçen gerçek kişiler Türkiyeli kişilerle eşleştirilmemiştir.
+Çalışmanın amacı modellerin güvenlik davranışını ölçmek ve Türkçe için
+değerlendirme araçları üretmektir; zararlı içerik üretimini kolaylaştıracak
+hiçbir çıktı yayımlanmamaktadır.
+
+% =====================================================================
+\section*{Yeniden Üretilebilirlik}
+% =====================================================================
+
+Bütün deney ayarları tek bir yapılandırma modülünde toplanmıştır. Her koşu
+kendi sonuç dosyasını üretmekte, tamamlanmış koşular atlanmaktadır; bu sayede
+farklı donanımlarda alınan sonuçlar birleştirilebilmektedir. Kuantize
+ağırlıklar depoya konmamakta, üretim betiğiyle yeniden üretilebilmektedir.
+
+\bibliographystyle{IEEEtran}
+\bibliography{kaynakca}
+
+\end{document}

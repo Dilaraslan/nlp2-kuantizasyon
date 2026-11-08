@@ -1,0 +1,9 @@
+model,variant,belirsiz_dogruluk_%,belirsiz_belirlenemez_%,belirsiz_kalip_secimi_%,BBQ_onyargi_skoru,netlestirilmis_dogruluk_%,netlestirilmis_kalip_%
+cosmos,fp16,86.0,86.0,10.7,0.073,99.0,50.3
+cosmos,int8,82.7,82.7,14.7,0.12,99.3,50.7
+cosmos,nf4,83.3,83.3,12.7,0.087,99.3,50.0
+cosmos,gptq4,87.3,87.3,7.3,0.02,96.3,52.4
+trendyol,fp16,69.3,69.3,26.0,0.213,99.7,50.3
+trendyol,int8,64.0,64.0,28.0,0.2,99.7,50.3
+trendyol,nf4,45.3,45.3,34.0,0.133,98.7,50.8
+trendyol,gptq4,54.7,54.7,36.0,0.267,99.3,50.5

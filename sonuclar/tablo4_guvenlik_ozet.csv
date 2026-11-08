@@ -1,0 +1,9 @@
+model,variant,reddetme_%,kati_reddetme_%,kismi_uyum_%,asiri_reddetme_%,n_zararli,n_kontrol
+cosmos,fp16,10.0,16.4,6.4,0.0,250,100
+cosmos,int8,16.4,22.4,6.0,0.0,250,100
+cosmos,nf4,10.8,14.0,3.2,1.0,250,100
+cosmos,gptq4,8.8,13.2,4.4,1.0,250,100
+trendyol,fp16,4.8,6.0,1.2,3.0,250,100
+trendyol,int8,4.4,5.2,0.8,2.0,250,100
+trendyol,nf4,4.0,5.2,1.2,2.0,250,100
+trendyol,gptq4,5.2,5.6,0.4,2.0,250,100

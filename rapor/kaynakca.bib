@@ -1,0 +1,259 @@
+% Kaynakça — Quantization'ın Türkçe LLM'lerde Bilgi, Güvenlik ve Toplumsal Önyargı Üzerindeki Etkisi
+%
+% Künyeler 5 Kasım 2026'da birincil kaynaklardan doğrulandı:
+% ACL Anthology (.bib dosyaları), PMLR (proceedings.mlr.press), NeurIPS
+% Proceedings ve arXiv sayfaları. Her girdinin altındaki "% kaynak:" satırı
+% künyenin alındığı sayfayı gösterir.
+%
+% İki girdi hakemli bir mekânda yayımlanmamıştır ve @misc olarak verilmiştir
+% (kumar2024finetuning, caglidil2024gender); raporda bunlara atıf yapılırken
+% ön baskı oldukları belirtilmelidir.
+%
+% Dikkat: iki ayrı "Jin" var. jin2024comprehensive -> Renren Jin (kuantizasyon),
+% jin2024kobbq -> Jiho Jin (KoBBQ). Metinde karıştırmayın.
+
+% ======================================================================
+% Kuantizasyon yöntemleri
+% ======================================================================
+
+@inproceedings{frantar2023gptq,
+  title     = {{GPTQ}: Accurate Post-Training Quantization for Generative Pre-trained Transformers},
+  author    = {Frantar, Elias and Ashkboos, Saleh and Hoefler, Torsten and Alistarh, Dan},
+  booktitle = {Proceedings of the 11th International Conference on Learning Representations (ICLR)},
+  year      = {2023},
+  eprint    = {2210.17323},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG}
+}
+% kaynak: https://arxiv.org/abs/2210.17323 (Comments alanı: "ICLR 2023")
+
+@inproceedings{lin2024awq,
+  title     = {{AWQ}: Activation-aware Weight Quantization for {LLM} Compression and Acceleration},
+  author    = {Lin, Ji and Tang, Jiaming and Tang, Haotian and Yang, Shang and
+               Chen, Wei-Ming and Wang, Wei-Chen and Xiao, Guangxuan and
+               Dang, Xingyu and Gan, Chuang and Han, Song},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  year      = {2024},
+  note      = {Best Paper Award},
+  eprint    = {2306.00978},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL}
+}
+% kaynak: https://arxiv.org/abs/2306.00978 (Comments: "MLSys 2024 Best Paper Award")
+
+@inproceedings{dettmers2023qlora,
+  title     = {{QLoRA}: Efficient Finetuning of Quantized {LLM}s},
+  author    = {Dettmers, Tim and Pagnoni, Artidoro and Holtzman, Ari and Zettlemoyer, Luke},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {36},
+  pages     = {10088--10115},
+  year      = {2023},
+  doi       = {10.52202/075280-0441}
+}
+% kaynak: https://proceedings.neurips.cc/paper_files/paper/2023/hash/1feb87871436031bdc0f2beaa62a049b-Abstract.html
+
+@inproceedings{dettmers2022llmint8,
+  title     = {{LLM.int8()}: 8-bit Matrix Multiplication for Transformers at Scale},
+  author    = {Dettmers, Tim and Lewis, Mike and Belkada, Younes and Zettlemoyer, Luke},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {35},
+  year      = {2022},
+  eprint    = {2208.07339},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG}
+}
+% kaynak: https://arxiv.org/abs/2208.07339 (Comments: "Published at NeurIPS 2022. Camera-ready version")
+
+% ======================================================================
+% Kuantizasyonun kaliteye ve çok dilliliğe etkisi
+% ======================================================================
+
+@inproceedings{marchisio2024quantization,
+  title     = {How Does Quantization Affect Multilingual {LLM}s?},
+  author    = {Marchisio, Kelly and Dash, Saurabh and Chen, Hongyu and
+               Aumiller, Dennis and {\"U}st{\"u}n, Ahmet and Hooker, Sara and Ruder, Sebastian},
+  booktitle = {Findings of the Association for Computational Linguistics: EMNLP 2024},
+  pages     = {15928--15947},
+  address   = {Miami, Florida, USA},
+  publisher = {Association for Computational Linguistics},
+  year      = {2024},
+  doi       = {10.18653/v1/2024.findings-emnlp.935}
+}
+% kaynak: https://aclanthology.org/2024.findings-emnlp.935.bib
+
+@inproceedings{jin2024comprehensive,
+  title     = {A Comprehensive Evaluation of Quantization Strategies for Large Language Models},
+  author    = {Jin, Renren and Du, Jiangcun and Huang, Wuwei and Liu, Wei and
+               Luan, Jian and Wang, Bin and Xiong, Deyi},
+  booktitle = {Findings of the Association for Computational Linguistics: ACL 2024},
+  pages     = {12186--12215},
+  month     = aug,
+  address   = {Bangkok, Thailand},
+  publisher = {Association for Computational Linguistics},
+  year      = {2024},
+  doi       = {10.18653/v1/2024.findings-acl.726}
+}
+% kaynak: https://aclanthology.org/2024.findings-acl.726.bib
+
+@inproceedings{li2024evaluating,
+  title     = {Evaluating Quantized Large Language Models},
+  author    = {Li, Shiyao and Ning, Xuefei and Wang, Luning and Liu, Tengxuan and
+               Shi, Xiangsheng and Yan, Shengen and Dai, Guohao and Yang, Huazhong and Wang, Yu},
+  booktitle = {Proceedings of the 41st International Conference on Machine Learning (ICML)},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {235},
+  pages     = {28480--28524},
+  publisher = {PMLR},
+  year      = {2024}
+}
+% kaynak: https://proceedings.mlr.press/v235/li24bb.html
+
+% ======================================================================
+% Kuantizasyon, güven ve güvenlik
+% ======================================================================
+
+@inproceedings{hong2024decoding,
+  title     = {Decoding Compressed Trust: Scrutinizing the Trustworthiness of Efficient {LLM}s Under Compression},
+  author    = {Hong, Junyuan and Duan, Jinhao and Zhang, Chenhui and Li, Zhangheng and
+               Xie, Chulin and Lieberman, Kelsey and Diffenderfer, James and
+               Bartoldson, Brian R. and Jaiswal, Ajay Kumar and Xu, Kaidi and
+               Kailkhura, Bhavya and Hendrycks, Dan and Song, Dawn and
+               Wang, Zhangyang and Li, Bo},
+  booktitle = {Proceedings of the 41st International Conference on Machine Learning (ICML)},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {235},
+  pages     = {18611--18633},
+  publisher = {PMLR},
+  year      = {2024}
+}
+% kaynak: https://proceedings.mlr.press/v235/hong24a.html
+
+@inproceedings{egashira2024exploiting,
+  title     = {Exploiting {LLM} Quantization},
+  author    = {Egashira, Kazuki and Vero, Mark and Staab, Robin and He, Jingxuan and Vechev, Martin},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {37},
+  pages     = {41709--41732},
+  year      = {2024},
+  doi       = {10.52202/079017-1319}
+}
+% kaynak: https://papers.nips.cc/paper_files/paper/2024/hash/496720b3c860111b95ac8634349dcc88-Abstract-Conference.html
+
+@misc{kumar2024finetuning,
+  title         = {Fine-Tuning, Quantization, and {LLM}s: Navigating Unintended Outcomes},
+  author        = {Kumar, Divyanshu and Kumar, Anurakt and Agarwal, Sahil and Harshangi, Prashanth},
+  year          = {2024},
+  eprint        = {2404.04392},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CR},
+  note          = {arXiv ön baskısı; hakemli bir mekân belirtilmemiştir}
+}
+% kaynak: https://arxiv.org/abs/2404.04392 (Journal reference alanı yok)
+
+% ======================================================================
+% Değerlendirme setleri
+% ======================================================================
+
+@inproceedings{mazeika2024harmbench,
+  title     = {{HarmBench}: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal},
+  author    = {Mazeika, Mantas and Phan, Long and Yin, Xuwang and Zou, Andy and
+               Wang, Zifan and Mu, Norman and Sakhaee, Elham and Li, Nathaniel and
+               Basart, Steven and Li, Bo and Forsyth, David and Hendrycks, Dan},
+  booktitle = {Proceedings of the 41st International Conference on Machine Learning (ICML)},
+  series    = {Proceedings of Machine Learning Research},
+  volume    = {235},
+  pages     = {35181--35224},
+  publisher = {PMLR},
+  year      = {2024}
+}
+% kaynak: https://proceedings.mlr.press/v235/mazeika24a.html
+
+@inproceedings{rottger2024xstest,
+  title     = {{XSTest}: A Test Suite for Identifying Exaggerated Safety Behaviours in Large Language Models},
+  author    = {R{\"o}ttger, Paul and Kirk, Hannah and Vidgen, Bertie and
+               Attanasio, Giuseppe and Bianchi, Federico and Hovy, Dirk},
+  booktitle = {Proceedings of the 2024 Conference of the North American Chapter of the
+               Association for Computational Linguistics: Human Language Technologies
+               (Volume 1: Long Papers)},
+  pages     = {5377--5400},
+  month     = jun,
+  address   = {Mexico City, Mexico},
+  publisher = {Association for Computational Linguistics},
+  year      = {2024},
+  doi       = {10.18653/v1/2024.naacl-long.301}
+}
+% kaynak: https://aclanthology.org/2024.naacl-long.301.bib
+
+@inproceedings{parrish2022bbq,
+  title     = {{BBQ}: A hand-built bias benchmark for question answering},
+  author    = {Parrish, Alicia and Chen, Angelica and Nangia, Nikita and
+               Padmakumar, Vishakh and Phang, Jason and Thompson, Jana and
+               Htut, Phu Mon and Bowman, Samuel R.},
+  booktitle = {Findings of the Association for Computational Linguistics: ACL 2022},
+  pages     = {2086--2105},
+  month     = may,
+  address   = {Dublin, Ireland},
+  publisher = {Association for Computational Linguistics},
+  year      = {2022},
+  doi       = {10.18653/v1/2022.findings-acl.165}
+}
+% kaynak: https://aclanthology.org/2022.findings-acl.165.bib
+
+@article{jin2024kobbq,
+  title     = {{KoBBQ}: Korean Bias Benchmark for Question Answering},
+  author    = {Jin, Jiho and Kim, Jiseon and Lee, Nayeon and Yoo, Haneul and
+               Oh, Alice and Lee, Hwaran},
+  journal   = {Transactions of the Association for Computational Linguistics},
+  volume    = {12},
+  pages     = {507--524},
+  year      = {2024},
+  publisher = {MIT Press},
+  address   = {Cambridge, MA},
+  doi       = {10.1162/tacl_a_00661}
+}
+% kaynak: https://aclanthology.org/2024.tacl-1.28.bib
+
+@inproceedings{yuksel2024turkishmmlu,
+  title     = {{T}urkish{MMLU}: Measuring Massive Multitask Language Understanding in {T}urkish},
+  author    = {Y{\"u}ksel, Arda and K{\"o}ksal, Abdullatif and Senel, L{\"u}tfi Kerem and
+               Korhonen, Anna and Schuetze, Hinrich},
+  booktitle = {Findings of the Association for Computational Linguistics: EMNLP 2024},
+  pages     = {7035--7055},
+  month     = nov,
+  address   = {Miami, Florida, USA},
+  publisher = {Association for Computational Linguistics},
+  year      = {2024},
+  doi       = {10.18653/v1/2024.findings-emnlp.413}
+}
+% kaynak: https://aclanthology.org/2024.findings-emnlp.413.bib
+
+% ======================================================================
+% Türkçe ve toplumsal önyargı
+% ======================================================================
+
+@misc{caglidil2024gender,
+  title         = {Investigating Gender Bias in {T}urkish Language Models},
+  author        = {Caglidil, Orhun Mersin and Ostendorff, Malte and Rehm, Georg},
+  year          = {2024},
+  eprint        = {2404.11726},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  note          = {arXiv ön baskısı; hakemli bir mekân belirtilmemiştir}
+}
+% kaynak: https://arxiv.org/abs/2404.11726 (Journal reference alanı yok)
+
+@inproceedings{zhao2018gender,
+  title     = {Gender Bias in Coreference Resolution: Evaluation and Debiasing Methods},
+  author    = {Zhao, Jieyu and Wang, Tianlu and Yatskar, Mark and
+               Ordonez, Vicente and Chang, Kai-Wei},
+  booktitle = {Proceedings of the 2018 Conference of the North American Chapter of the
+               Association for Computational Linguistics: Human Language Technologies,
+               Volume 2 (Short Papers)},
+  pages     = {15--20},
+  month     = jun,
+  address   = {New Orleans, Louisiana},
+  publisher = {Association for Computational Linguistics},
+  year      = {2018},
+  doi       = {10.18653/v1/N18-2003}
+}
+% kaynak: https://aclanthology.org/N18-2003.bib

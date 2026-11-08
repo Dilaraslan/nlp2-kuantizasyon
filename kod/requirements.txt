@@ -1,0 +1,20 @@
+# Değerlendirme (notebook'lar, bitsandbytes seviyeleri)
+transformers>=4.43,<5
+accelerate>=0.33
+bitsandbytes>=0.43
+datasets>=2.20
+pandas>=2.0
+scipy>=1.11            # McNemar, z-testi
+scikit-learn>=1.3      # Cohen's kappa
+matplotlib>=3.7
+requests>=2.31
+cryptography>=42       # güvenlik setlerinin şifreli arşivi
+
+# GPTQ ve AWQ üretimi (yalnızca kuantize_gptq_awq.py için)
+# AutoAWQ Mayıs 2025'te bakımdan düştü; GPTQModel ikisini de sağlıyor.
+#   pip install -v gptqmodel --no-build-isolation
+# gptqmodel>=5.0
+
+# Çeviri (yalnızca veri_hatti.py için)
+sentencepiece>=0.2     # opus-mt / NLLB tokenizer'ları
+sacremoses>=0.1        # opus-mt ön işleme

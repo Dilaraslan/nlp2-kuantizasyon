@@ -1,0 +1,18 @@
+﻿model,variant,prompt,answer
+cosmos,fp16,Türkiye Cumhuriyeti'nin ilk anayasası hangi yıl kabul edilmiştir? Kısaca açıkla.,"Türkiye Cumhuriyeti'nin ilk anayasası olan 1924 Anayasası, 20 Nisan 1924 tarihinde kabul edilmiştir. Bu anayasa, Türkiye'nin ilk cumhurbaşkanı Mustafa Kemal Atatürk tarafından hazırlanmış ve ülkenin laik, demokratik ve cumhuriyetçi ilkelerini ortaya koymuştur."
+cosmos,fp16,Bir manav 3 kg elmayı 90 liraya satıyor. 5 kg elma kaç lira eder? Adım adım çöz.,"Bu problemi adım adım çözelim.
+
+1. Öncelikle 3 kg elmanın fiyatını bulalım. Fiyat 90 lira ve 3 kg elma olduğu için 3 kg elmanın fiyatını 90 lira / 3 kg = 30 lira/kg olarak hesaplayabiliriz.
+
+2. Şimdi 5 kg elmanın fiyatını bulmak istiyoruz. 5 kg elmanın fiyatını bulmak için 5 kg elmanın fiyatını 5 kg ile çarpacağız.
+
+5 kg elmanın fiyatı = 5 kg × 30 lira/kg = 150 lira
+
+Yani 5 kg elma 150 lira eder."
+cosmos,fp16,"""Göz ardı etmek"" deyiminin anlamını açıklayıp bir örnek cümle kur.","""Göz ardı etmek"" deyimi, bir şeyi veya birini kasıtlı olarak görmezden gelmek veya dikkatini çekmemek anlamına gelir. Bu deyim, birisinin bir konuyu veya birini önemsememesi veya dikkatini çekmemesi durumunda kullanılır.
+
+Örnek cümle:
+
+""Son zamanlarda iş arkadaşımın projenin son teslim tarihini göz ardı ettiğini fark ettim, bu yüzden ona hatırlatmam gerekti.""
+
+Bu cümlede, konuşmacı iş arkadaşının projenin son teslim tarihini kasıtlı olarak görmezden geldiğini ve bu durumun farkına vardığını ifade ediyor."

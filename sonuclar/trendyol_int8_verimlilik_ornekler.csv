@@ -1,0 +1,17 @@
+﻿model,variant,prompt,answer
+trendyol,int8,Türkiye Cumhuriyeti'nin ilk anayasası hangi yıl kabul edilmiştir? Kısaca açıkla.,"Türkiye Cumhuriyeti'nin ilk anayasası 1924 yılında kabul edilmiştir. Bu anayasa, Mustafa Kemal Atatürk liderliğinde yapılan devrimlerin ve reformların temelini oluşturmuştur."
+trendyol,int8,Bir manav 3 kg elmayı 90 liraya satıyor. 5 kg elma kaç lira eder? Adım adım çöz.,"Adım 1: 3 kg elmanın kg başına fiyatını bulun.
+3 kg elmanın toplam maliyeti 90 TL'dir. 3 kg elmanın kg başına fiyatını bulmak için toplam maliyeti kg sayısına böleriz.
+
+90 TL / 3 kg = kg başına 30 TL
+
+Adım 2: 5 kg elmanın kg başına fiyatını bulun.
+Artık 3 kg elmanın kg başına fiyatını bildiğimize göre, 5 kg elmanın kg başına fiyatını bulmak için bunu kullanabiliriz.
+
+5 kg elmanın toplam maliyeti 5 kg * kg başına 30 TL = 150 TL olacaktır.
+
+Adım 3: 5 kg elmanın toplam maliyetini bulun.
+Artık 5 kg elmanın kg başına fiyatını bildiğimize göre, 5 kg elmanın toplam maliyetini bulabiliriz.
+
+5 kg elmanın toplam maliyeti 150 TL'dir."
+trendyol,int8,"""Göz ardı etmek"" deyiminin anlamını açıklayıp bir örnek cümle kur.","""Göz ardı etmek"" deyimi, bir şeyi görmezden gelmek veya önemsememek anlamına gelir. Örneğin, ""O, arkadaşının başarısını göz ardı etti ve kendi başarısını kutladı."""

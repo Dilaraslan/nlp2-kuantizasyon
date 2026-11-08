@@ -1,0 +1,2 @@
+model,variant,load_s,footprint_gb,peak_gpu_gb,tok_per_s,perplexity,gpus
+trendyol,int8,81.5,8.46,8.64,6.28,4.146,Tesla T4

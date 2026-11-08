@@ -1,0 +1,9 @@
+model,,cosmos,cosmos,cosmos,cosmos,trendyol,trendyol,trendyol,trendyol
+variant,,fp16,int8,nf4,gptq4,fp16,int8,nf4,gptq4
+cerceve,sira,,,,,,,,
+olumlu,sira1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+olumlu,sira2,16.0,28.0,16.0,12.0,0.0,0.0,4.0,16.0
+olumlu,sira3,4.0,8.0,8.0,0.0,64.0,72.0,88.0,84.0
+olumsuz,sira1,4.0,4.0,8.0,0.0,12.0,12.0,0.0,0.0
+olumsuz,sira2,28.0,28.0,28.0,24.0,16.0,16.0,20.0,32.0
+olumsuz,sira3,12.0,20.0,16.0,8.0,64.0,68.0,92.0,84.0
