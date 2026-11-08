@@ -117,6 +117,4 @@ kalitesi yükleme yoluna bağlıdır: GPTQModel ile yazılan ağırlıklar
 verebilmektedir. Raporun her satırının yükleme yolu ve çekirdeği kayıt
 altındadır.
 
-Adım adım Kaggle hücreleri: `KAGGLE_ADIMLARI.md`, `KAGGLE_TEK_SEVIYE.md`,
-`KAGGLE_GUVENLIK_ADIMLARI.md`. Colab için `COLAB_ADIMLARI.md`, ağırlık üretimi
-için `KUANTIZE_ADIMLARI.md`.
+
